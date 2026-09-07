@@ -1,0 +1,57 @@
+{
+  "model": "VAEV5",
+  "checkpoint": "checkpoints\\best_vae_v5_forensic.pth",
+  "input_shape": [
+    2,
+    3,
+    128,
+    128
+  ],
+  "mu_shape": [
+    2,
+    256
+  ],
+  "logvar_shape": [
+    2,
+    256
+  ],
+  "latent_shape": [
+    2,
+    256
+  ],
+  "output_shape": [
+    2,
+    3,
+    128,
+    128
+  ],
+  "generated_shape": [
+    2,
+    3,
+    128,
+    128
+  ],
+  "latent_dim": 256,
+  "total_parameters": 17599971,
+  "losses": {
+    "total": 0.15451566874980927,
+    "reconstruction": 0.15451472997665405,
+    "mse": 0.07709218561649323,
+    "l1": 0.23193728923797607,
+    "kl": 0.0031153857707977295
+  },
+  "output_range": [
+    0.0605914369225502,
+    0.9000071883201599
+  ],
+  "missing_keys": [],
+  "unexpected_keys": [],
+  "finite": true,
+  "checkpoint_metadata": {
+    "epoch": 80,
+    "val_mse": 0.0014090144694401648,
+    "val_psnr": 28.5108454701431,
+    "val_kl": 0.002013940324350608
+  },
+  "device": "cpu"
+}

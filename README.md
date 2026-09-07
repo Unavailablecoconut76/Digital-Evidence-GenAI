@@ -19,11 +19,11 @@ The repository also contains evaluation scripts, saved experimental results, fac
 | CASIA dataset pipeline | Completed | Inventory, validation, portable stratified splits, and reusable loaders |
 | Standard Autoencoder | Completed | Deterministic reconstruction and 24× latent compression |
 | Denoising Autoencoder experiment | Completed | Reconstruction of clean images from Gaussian-noise inputs |
-| VAE V1 | Completed | Baseline probabilistic reconstruction and sampling |
-| VAE V2 | Completed | VAE training with KL warm-up/beta annealing |
+| VAE V1/V2 | Historical baselines | Earlier probabilistic reconstruction and sampling experiments |
+| VAE V5 forensic | **Current / completed** | Authentic-only reconstruction learning and exploratory anomaly analysis |
 | DCGAN | Completed | Adversarial generation of 64×64 synthetic images |
 | Quantitative evaluation | Completed | Reconstruction metrics, KL, FID, and Inception Score where applicable |
-| Streamlit GUI | Completed | Cached inference and interactive demonstrations for AE, VAE V2, and DCGAN |
+| Streamlit GUI | Completed | Cached inference and interactive demonstrations for AE, VAE V5, and DCGAN |
 | Auxiliary ResNet-18 classifier notebook | Experimental | Separate real-vs-fake classification study; not part of the generative pipeline or GUI |
 | Transformer | Planned | Future sequence/context component |
 | Diffusion model | Planned | Future image-generation component |
@@ -148,9 +148,16 @@ The AE is **not trained or validated as a forgery classifier**. Differences betw
 
 ### Purpose and architecture
 
-The VAE supports reconstruction, a probabilistic latent representation, latent interpolation, and sampling of new synthetic images. Its convolutional encoder reduces a 3×128×128 input to an encoded 128×8×8 feature map. Separate fully connected heads produce 128-dimensional mean and log-variance vectors. The decoder maps a sampled latent vector back to a 3×128×128 Sigmoid output.
+The current VAE is **VAE V5 — Forensic Reconstruction and Anomaly Analysis**. It learns reconstruction from authentic training/validation images only, then compares reconstruction behavior on the untouched mixed test split. It is an anomaly-analysis module, not a calibrated tampering classifier.
 
-The model contains **4,009,795 parameters** and uses:
+VAE V5 processes 3×128×128 RGB inputs through four convolutional stages (32, 64, 128, and 256 channels). Residual blocks, GroupNorm, and SiLU activations are used throughout. Separate fully connected heads produce 256-dimensional μ and log-variance vectors. The decoder combines a latent projection with encoder skip features, bilinear upsampling, convolutional residual blocks, and a final Sigmoid output.
+
+| Property | VAE V5 |
+| --- | ---: |
+| Latent dimension | 256 |
+| Parameters | 17,599,971 |
+| Reconstruction mode | Deterministic z=μ with encoder skips |
+| Training scope | Authentic only |
 
 <pre>
 σ = exp(0.5 × logvar)
@@ -158,37 +165,43 @@ The model contains **4,009,795 parameters** and uses:
 z = μ + σ × ε
 </pre>
 
-### Loss
+### Loss and KL warm-up
 
-The implementation calculates mean pixelwise MSE for reconstruction and averages the per-sample summed latent KL term:
+The final V5 loss is the exact hybrid objective from the source experiment:
 
 <pre>
+Reconstruction = 0.5 × MSE + 0.5 × L1
 KL = mean[-0.5 × sum(1 + logvar - μ² - exp(logvar))]
-Total loss = reconstruction MSE + β × KL
+Total = Reconstruction + β × KL
 </pre>
 
-MSE measures reconstruction fidelity; KL regularizes the approximate posterior toward the chosen prior. A lower KL value does not automatically mean better images—the reconstruction and latent-space objectives must be balanced.
+β increases linearly from 0.00005 to 0.00030 over the first 20 epochs and remains at 0.00030 afterward. KL regularizes the latent distribution; lower KL does not automatically mean better reconstruction quality.
 
-### VAE versions
+### Training configuration and checkpoint provenance
 
-| Result | VAE V1 | VAE V2 |
-| --- | ---: | ---: |
-| Test MSE ↓ | 0.02909885 | **0.02816802** |
-| Test PSNR ↑ | 15.7895 dB | **15.9348 dB** |
-| Test SSIM ↑ | 0.287554 | **0.290189** |
-| Mean test KL | 7.139858 | 8.219714 |
-| Test total loss | 0.03623871 | 0.03638773 |
-| FID ↓ | 339.578979 | **321.358307** |
-| Best epoch | 30 | 43 |
-| Recorded training time | 1,554.43 s | 1,363.93 s |
+The source notebook specifies 80 fixed epochs, AdamW, learning rate 0.0001, weight decay 0.00001, batch size 32, gradient clipping at 1.0, ReduceLROnPlateau, no early stopping, and checkpoint selection by authentic-validation MSE.
 
-V1 used a fixed β of 0.001 for 30 epochs. V2 introduced a ten-epoch linear warm-up from β=0.0001 to the target β=0.001, then retained β=0.001. It was configured for at most 50 epochs with patience 5, completed 48 epochs, and stopped early. Its best epoch-43 validation values were:
+The notebook's stored output reports best epoch 18, validation MSE 0.002313, and PSNR 26.36 dB. However, the checkpoint actually supplied to this repository records **epoch 80**, validation MSE **0.001409014**, validation PSNR **28.510845 dB**, and validation KL **0.00201394**. The application uses the checkpoint metadata and documents the notebook figures only as historical provenance.
 
-- total loss: 0.04100876;
-- reconstruction loss: 0.03267168; and
-- KL loss: 8.337078.
+### Canonical test evaluation
 
-V2 provides modest improvements in test MSE, PSNR, SSIM, and FID over V1. <code>checkpoints/best_vae_v2.pth</code> is the VAE checkpoint used by the GUI. Reconstructions remain visibly smooth: this reflects the probabilistic reconstruction/regularization trade-off together with the current architecture and training choices, not an unavoidable property of every VAE.
+The current checkpoint was evaluated deterministically on the repository's exact 1,892-image test split:
+
+| Group | MSE ↓ | PSNR ↑ | SSIM ↑ | Mean KL |
+| --- | ---: | ---: | ---: | ---: |
+| Overall (1,892) | **0.00106170** | **31.3124 dB** | **0.950181** | 0.00198055 |
+| Authentic (1,123) | 0.00089763 | 31.8360 dB | 0.952742 | 0.00186138 |
+| Tampered (769) | 0.00130129 | 30.5479 dB | 0.946442 | 0.00215458 |
+
+Reconstruction-MSE ROC-AUC is **0.604618** and SSIM-error ROC-AUC is **0.593219**. The error distributions overlap substantially. These values show limited exploratory separation and do not make VAE V5 a reliable standalone forgery detector or turn reconstruction error into a tampering probability.
+
+The large notebook did not calculate a valid final V5 FID. The clean evaluation script supports opt-in FID with <code>--run-fid</code>, but the current V5 FID remains **N/A** rather than reusing the old V2 value.
+
+Although the model defines a probabilistic latent and prior-sampling path, the trained decoder depends heavily on encoder skip features. Prior-only samples generated with zero skips are nearly uniform/dark, consistent with the checkpoint's very small KL and weak use of the latent variable. V5's strong reconstruction results must therefore not be interpreted as strong unconditional generation.
+
+### Historical baselines
+
+VAE V1 and V2 checkpoints/results remain in the repository for comparison. V2 previously reported MSE 0.02816802, PSNR 15.9348 dB, SSIM 0.290189, and FID 321.358307. They are no longer the current GUI model.
 
 ## 7. DCGAN
 
@@ -239,20 +252,20 @@ FID is Fréchet Inception Distance, for which lower is generally better. Incepti
 
 ## 8. Quantitative Model Comparison
 
-| Metric | AE | VAE V2 | DCGAN |
+| Metric | AE | VAE V5 | DCGAN |
 | --- | ---: | ---: | ---: |
-| MSE ↓ | 0.00353242 | 0.02816802 | N/A |
-| PSNR ↑ | 25.3077 dB | 15.9348 dB | N/A |
-| SSIM ↑ | 0.761558 | 0.290189 | N/A |
-| KL | N/A | 8.219714 | N/A |
-| FID ↓ | N/A | 321.358307 | 169.8786 |
+| MSE ↓ | 0.00353242 | 0.00106170 | N/A |
+| PSNR ↑ | 25.3077 dB | 31.3124 dB | N/A |
+| SSIM ↑ | 0.761558 | 0.950181 | N/A |
+| KL | N/A | 0.00198055 | N/A |
+| FID ↓ | N/A | N/A | 169.8786 |
 | Inception Score ↑ | N/A | N/A | 2.9495 ± 0.1316 |
 
 These metrics do not define a single overall ranking because the models solve different tasks:
 
 - the AE is best suited among the current models for deterministic reconstruction;
-- VAE V2 combines reconstruction, a regularized probabilistic latent space, and sampling; and
-- DCGAN is dedicated to adversarial generation and currently has a lower FID than VAE V2.
+- VAE V5 combines skip-connected reconstruction, a probabilistic latent space, prior sampling, and exploratory anomaly analysis; and
+- DCGAN is dedicated to adversarial generation. A current V5 FID is not yet available.
 
 AE reconstruction metrics should not be compared directly with DCGAN FID or Inception Score.
 
@@ -262,7 +275,7 @@ Run <code>app.py</code> to open five tabs:
 
 1. **Project Overview** — CASIA counts and cards explaining each generative model.
 2. **Autoencoder** — accepts JPG, JPEG, PNG, BMP, TIF, and TIFF images; reconstructs at 128×128; displays original/reconstruction, MSE, PSNR, SSIM, compression, and parameter count.
-3. **VAE** — reconstructs an uploaded image using deterministic <code>z=μ</code>, displays reconstruction metrics, and can sample a synthetic image from <code>N(0,I)</code>.
+3. **VAE V5** — reconstructs an uploaded image using deterministic <code>z=μ</code> and encoder skips, displays reconstruction metrics with an anomaly-analysis disclaimer, and can sample a synthetic image from <code>N(0,I)</code>.
 4. **GAN** — requires no uploaded image; generates a selectable grid of one to eight samples from random 100-dimensional noise and displays stored FID/IS information.
 5. **Model Comparison** — summarizes model objectives and metrics, with a warning that different objectives require different metrics.
 
@@ -271,7 +284,7 @@ Models are loaded once with <code>@st.cache_resource</code>, automatically use C
 The GUI currently loads:
 
 - <code>checkpoints/best_autoencoder.pth</code>;
-- <code>checkpoints/best_vae_v2.pth</code>;
+- <code>checkpoints/best_vae_v5_forensic.pth</code>;
 - <code>checkpoints/best_generator.pth</code>; and
 - <code>checkpoints/best_discriminator.pth</code>.
 
@@ -302,6 +315,7 @@ Digital_Evidence/
 │   ├── train_denoising_autoencoder.py
 │   ├── evaluate_denoising_autoencoder.py
 │   ├── vae.py
+│   ├── vae_legacy.py
 │   ├── train_vae.py
 │   ├── train_vae_v2.py
 │   ├── evaluate_vae.py
@@ -327,6 +341,7 @@ Digital_Evidence/
 │   ├── best_denoising_autoencoder.pth
 │   ├── best_vae.pth
 │   ├── best_vae_v2.pth
+│   ├── best_vae_v5_forensic.pth
 │   ├── best_generator.pth
 │   └── best_discriminator.pth
 ├── results/
@@ -335,11 +350,13 @@ Digital_Evidence/
 │   ├── dae_test_metrics.json
 │   ├── vae_test_metrics.json
 │   ├── vae_v2_test_metrics.json
+│   ├── vae_v5_test_metrics.json
 │   ├── gan_test_metrics.json
 │   └── training histories and per-image CSV files
 └── outputs/
     ├── ae/
     ├── vae/
+    ├── vae_v5/
     └── gan/
 </pre>
 
@@ -356,10 +373,11 @@ Raw CASIA data and generated output images are ignored by the current Git config
 | <code>src/train_autoencoder.py</code> | Standard-AE training, validation, early stopping, checkpoints, and plots |
 | <code>src/evaluate_autoencoder.py</code> | Full-test AE metrics, per-image results, reconstructions, and group comparisons |
 | <code>src/denoising_dataset.py</code> | Configurable Gaussian-noise input wrapper |
-| <code>src/vae.py</code> | Convolutional VAE, reparameterization, and decoder |
-| <code>src/train_vae.py</code> | Fixed-β VAE V1 training |
-| <code>src/train_vae_v2.py</code> | KL-warm-up VAE V2 training |
-| <code>src/evaluate_vae.py</code> | VAE V1 test metrics, generation, interpolation, and FID |
+| <code>src/vae.py</code> | Final residual/skip-connected VAE V5, exact loss, and beta schedule |
+| <code>src/vae_legacy.py</code> | Historical V1/V2 architecture compatibility |
+| <code>src/train_vae.py</code> | Authentic-only VAE V5 training and validation-MSE checkpointing |
+| <code>src/train_vae_v2.py</code> | Historical KL-warm-up VAE V2 training |
+| <code>src/evaluate_vae.py</code> | VAE V5 reconstruction, group metrics, ROC-AUC, plots, generation, and optional FID |
 | <code>src/evaluate_vae_v2.py</code> | V2 evaluation and V1/V2 comparison |
 | <code>src/dcgan.py</code> | Generator, discriminator, and DCGAN weight initialization |
 | <code>src/gan_dataset.py</code> | 64×64, [-1,1] GAN data pipeline |
@@ -392,11 +410,7 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ~~~
 
-FID/IS evaluation additionally imports TorchMetrics and Torch-Fidelity. The Colab notebooks install them explicitly, but they are not currently listed in <code>requirements.txt</code>. Install them before running those evaluation scripts locally:
-
-~~~bash
-pip install torchmetrics torch-fidelity
-~~~
+TorchMetrics and Torch-Fidelity are included for the optional VAE/DCGAN FID and Inception Score evaluations.
 
 ## 13. Running the GUI
 
@@ -438,11 +452,9 @@ python src/evaluate_denoising_autoencoder.py
 ~~~bash
 python src/train_vae.py
 python src/evaluate_vae.py
-python src/train_vae_v2.py
-python src/evaluate_vae_v2.py
 ~~~
 
-The V2 command defaults to the recorded 50-epoch maximum, patience 5, ten warm-up epochs, and target β=0.001.
+The current training script defaults to authentic-only VAE V5: 80 epochs, latent dimension 256, AdamW, hybrid MSE/L1 reconstruction, and a 20-epoch beta warm-up. Use <code>python src/evaluate_vae.py --run-fid</code> only when TorchMetrics/Torch-Fidelity and a suitable GPU are available. Historical V1/V2 scripts, architecture compatibility, and checkpoints remain for reference but are not used by the GUI.
 
 ### DCGAN
 
@@ -476,14 +488,14 @@ Not every metric applies to every model. Reconstruction metrics and distribution
 - Test MSE / PSNR / SSIM: 0.00353242 / 25.3077 dB / 0.761558
 - Recorded run: 46 epochs completed on Tesla T4 in 1,906.4 seconds
 
-### VAE V2
+### VAE V5 forensic
 
-- Best checkpoint epoch: 43
-- Best validation total/reconstruction/KL: 0.04100876 / 0.03267168 / 8.337078
-- Test MSE / PSNR / SSIM: 0.02816802 / 15.9348 dB / 0.290189
-- Test KL / total loss: 8.219714 / 0.03638773
-- FID: 321.358307
-- Recorded run: 48 epochs completed with early stopping on Tesla T4 in 1,363.93 seconds
+- Current checkpoint metadata: epoch 80, validation MSE 0.001409014, PSNR 28.510845 dB, KL 0.00201394
+- Source-notebook stored run: best epoch 18, validation MSE 0.002313, PSNR 26.36 dB
+- Canonical test MSE / PSNR / SSIM: 0.00106170 / 31.3124 dB / 0.950181
+- Test KL / hybrid total loss: 0.00198055 / 0.01129045
+- Reconstruction-MSE / SSIM-error ROC-AUC: 0.604618 / 0.593219
+- FID: N/A; the source notebook did not contain a valid final V5 calculation
 
 ### DCGAN
 
@@ -503,9 +515,9 @@ Selected locally generated artifacts are shown below.
 
 ![Autoencoder original and reconstructed test images](outputs/ae/test_reconstruction_grid.png)
 
-### VAE V1 and V2 reconstruction comparison
+### VAE V5 reconstruction
 
-![VAE V1 and V2 reconstruction comparison](outputs/vae/vae_v1_vs_v2_reconstruction.png)
+![VAE V5 authentic and tampered reconstruction examples](outputs/vae_v5/reconstruction_grid.png)
 
 ### DCGAN final generated samples
 
@@ -514,7 +526,7 @@ Selected locally generated artifacts are shown below.
 Additional available plots include:
 
 - AE training, denoising, and authentic-versus-tampered comparisons under <code>outputs/ae/</code>;
-- VAE loss curves, generated samples, latent interpolation, and reconstruction comparisons under <code>outputs/vae/</code>; and
+- current VAE V5 reconstruction, generated samples, error distributions, and ROC curves under <code>outputs/vae_v5/</code>, with historical VAE artifacts under <code>outputs/vae/</code>; and
 - DCGAN loss curves and fixed-noise samples from epochs 5, 10, 15, 20, 25, and 30 under <code>outputs/gan/</code>.
 
 Because <code>outputs/</code> is currently ignored by Git, these embedded images render only where the files are present (or if selected artifacts are later force-added to version control).
@@ -524,15 +536,17 @@ Because <code>outputs/</code> is currently ignored by Git, these embedded images
 ### Technical limitations
 
 - CASIA raw data and generated outputs are ignored by Git, so a fresh clone requires dataset setup and may not display the embedded README images.
-- <code>torchmetrics</code> and <code>torch-fidelity</code> are used by FID/IS evaluation but are installed in notebooks rather than declared in <code>requirements.txt</code>.
 - <code>notebooks/01_dataset_exploration.ipynb</code> currently contains no notebook cells; the working exploration implementation and records are the Python script, inventory CSV, and summary JSON.
 - The GUI comparison table contains older AE values (MSE 0.00413435, PSNR 24.5603, SSIM 0.725357), while the latest evaluation files report the improved values documented here.
 - <code>notebooks/02_autoencoder_training_colab.ipynb</code> retains the earlier 20-epoch experiment; the current final 50-epoch-configured run is documented in the complete AE demo notebook and latest history/checkpoint.
+- The V5 source notebook used a 1,893-image test set and its stored best-run metadata differs from the supplied checkpoint; the clean project evaluation instead uses the canonical 1,892-image split and reports both provenance records.
 - GAN checkpoints created in Colab contain platform-specific path metadata. <code>src/gan_inference.py</code> includes a compatibility mapping for local GUI loading, while direct local use of <code>src/evaluate_dcgan.py</code> may require a matching Python environment or equivalent compatibility handling.
 
 ### Model limitations
 
-- VAE V2 improves on V1 only modestly and retains smooth, low-detail reconstructions; its FID is still high.
+- VAE V5 reconstructs strongly through encoder skip connections, but its MSE ROC-AUC of 0.604618 still provides only limited authentic/tampered separation.
+- The V5 decoder was trained with image skip features. Prior generation has no source-image skips, uses zero-valued skips, and currently produces visually degenerate dark samples; reconstruction quality and generation quality must not be conflated.
+- A valid final V5 FID is not currently available.
 - DCGAN samples capture coarse visual structure but have limited sharpness and realism. Final loss behavior is consistent with a comparatively strong discriminator, although generator and discriminator losses cannot be compared directly.
 - The AE, VAE, and DCGAN are not trained as validated tampering detectors.
 - CASIA is the only dataset used by the generative modules, limiting evidence of cross-dataset generalization.
@@ -555,8 +569,8 @@ Repository artifacts support the following development history:
 | Ground-truth PNG masks could be confused with model inputs | Inventory-based class discovery, explicit exclusion, and zero-leakage assertions |
 | Local Windows paths did not transfer cleanly to Colab | Split manifests use relative paths and reconstruct paths from a configurable dataset root |
 | CPU full training was impractical | Smoke tests were run locally and full experiments were executed on a Tesla T4 in Colab |
-| Baseline VAE reconstruction and FID were weak | VAE V2 added a ten-epoch KL warm-up while retaining the same architecture and target β |
-| Multiple experiment versions could overwrite each other | Separate V1/V2 histories, results, visualizations, and checkpoints were retained |
+| Baseline VAE reconstruction was weak | VAE V5 added residual blocks, GroupNorm/SiLU, skip-connected decoding, a hybrid MSE/L1 loss, and a 20-epoch KL warm-up |
+| Multiple VAE experiments and conflicting notebook outputs | V1/V2 artifacts are retained as historical baselines; V5 uses separate paths and runtime evaluation trusts the supplied checkpoint plus canonical manifests |
 | GUI checkpoint loading across Colab/local Python path classes | GAN inference adds a restricted compatibility mapping during checkpoint loading |
 | Three model families require different interactions | The Streamlit interface uses dedicated inference wrappers and task-specific tabs |
 
@@ -569,7 +583,8 @@ The auxiliary classifier notebook also contains DataLoader multiprocessing clean
 | <code>checkpoints/best_autoencoder.pth</code> | Standard AE, best validation checkpoint at epoch 42 | Yes |
 | <code>checkpoints/best_denoising_autoencoder.pth</code> | Gaussian-noise denoising AE experiment | No |
 | <code>checkpoints/best_vae.pth</code> | Fixed-β VAE V1 baseline | No |
-| <code>checkpoints/best_vae_v2.pth</code> | KL-warm-up VAE V2, best epoch 43 | Yes |
+| <code>checkpoints/best_vae_v2.pth</code> | Historical KL-warm-up VAE V2, best epoch 43 | No |
+| <code>checkpoints/best_vae_v5_forensic.pth</code> | Current authentic-only forensic reconstruction VAE V5 | **Yes** |
 | <code>checkpoints/best_generator.pth</code> | Final trained DCGAN generator state | Yes |
 | <code>checkpoints/best_discriminator.pth</code> | Final trained DCGAN discriminator state | Loaded for model validation/information |
 
@@ -582,7 +597,7 @@ Ready for faculty review:
 - verified CASIA inventory and fixed train/validation/test manifests;
 - modular PyTorch data pipelines;
 - trained standard and denoising AEs;
-- trained VAE V1 and KL-warm-up VAE V2;
+- historical VAE V1/V2 baselines and the current authentic-only VAE V5;
 - trained DCGAN generator and discriminator;
 - full-test reconstruction results and per-image CSVs;
 - VAE/DCGAN distribution-level generation metrics;

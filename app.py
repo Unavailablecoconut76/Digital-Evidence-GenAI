@@ -28,9 +28,11 @@ def load_ae() -> AutoencoderInference:
     return AutoencoderInference(ROOT / "checkpoints" / "best_autoencoder.pth", DEVICE)
 
 
-@st.cache_resource(show_spinner="Loading VAE V2 checkpoint…")
+@st.cache_resource(show_spinner="Loading forensic VAE V5 checkpoint…")
 def load_vae() -> VAEInference:
-    return VAEInference(ROOT / "checkpoints" / "best_vae_v2.pth", DEVICE, 128)
+    return VAEInference(
+        ROOT / "checkpoints" / "best_vae_v5_forensic.pth", DEVICE, 256
+    )
 
 
 @st.cache_resource(show_spinner="Loading GAN checkpoints…")
@@ -104,7 +106,7 @@ with overview_tab:
     st.markdown("This system demonstrates complementary generative AI techniques for digital image evidence analysis, reconstruction, compression, probabilistic representation, and synthetic generation.")
     cards = st.columns(3)
     cards[0].markdown('<div class="model-card"><h3>Autoencoder</h3><p>Image reconstruction and 24× latent compression.</p></div>', unsafe_allow_html=True)
-    cards[1].markdown('<div class="model-card"><h3>Variational Autoencoder</h3><p>Probabilistic reconstruction and synthetic generation.</p></div>', unsafe_allow_html=True)
+    cards[1].markdown('<div class="model-card"><h3>VAE V5</h3><p>Forensic reconstruction, anomaly analysis, and probabilistic generation.</p></div>', unsafe_allow_html=True)
     cards[2].markdown('<div class="model-card"><h3>DCGAN</h3><p>Adversarial synthetic forensic-image generation.</p></div>', unsafe_allow_html=True)
     st.markdown('<div class="notice">Authentic/tampered labels support exploratory comparisons only. Reconstruction error alone does not prove forgery.</div>', unsafe_allow_html=True)
 
@@ -130,12 +132,12 @@ with ae_tab:
             except Exception as exc: st.error(f"AE reconstruction failed: {exc}")
 
 with vae_tab:
-    st.subheader("Variational Autoencoder V2")
-    st.caption("Probabilistic latent reconstruction and generation • RGB 128×128 • [0,1]")
-    vae, vae_error = safe_load(load_vae, "VAE V2")
+    st.subheader("VAE V5 — Forensic Reconstruction and Anomaly Analysis")
+    st.caption("Authentic-only reconstruction learning • RGB 128×128 • [0,1]")
+    vae, vae_error = safe_load(load_vae, "VAE V5")
     if vae_error: st.error(vae_error)
     else:
-        st.metric("Latent dimension", "128")
+        st.metric("Latent dimension", "256")
         upload = st.file_uploader("Upload an image for VAE reconstruction", type=["jpg","jpeg","png","bmp","tif","tiff"], key="vae_upload")
         image = uploaded_image(upload)
         if image is not None:
@@ -145,13 +147,21 @@ with vae_tab:
                 left.image(original, caption="Original", width="stretch")
                 right.image(reconstructed, caption="VAE reconstruction (z = μ)", width="stretch", clamp=True)
                 metric_cards(metrics)
-                st.caption("Reconstruction statistics are exploratory and are not forgery predictions.")
+                st.caption("MSE is shown as reconstruction error, not as a tampering probability.")
+                st.warning(
+                    "This forensic reconstruction indicator is exploratory and is not a "
+                    "validated tampering probability or standalone forgery decision."
+                )
             except Exception as exc: st.error(f"VAE reconstruction failed: {exc}")
         st.divider()
         if st.button("Generate Synthetic Image", type="primary", key="vae_generate"):
             try:
                 st.image(vae.generate(), caption="Synthetic VAE-generated image", width=420, clamp=True)
                 st.warning("Synthetic research output — not real forensic evidence.")
+                st.caption(
+                    "VAE V5 was optimized for skip-connected reconstruction. Prior-only "
+                    "samples have no image skip features and may be visually degenerate."
+                )
             except Exception as exc: st.error(f"VAE generation failed: {exc}")
 
 with gan_tab:
@@ -178,8 +188,8 @@ with gan_tab:
 with comparison_tab:
     st.subheader("Model Comparison")
     comparison = pd.DataFrame([
-        {"Model":"Autoencoder", "Purpose":"Reconstruction + compression", "MSE":"0.00413435", "PSNR":"24.5603", "SSIM":"0.725357", "FID":"—", "Inception Score":"—"},
-        {"Model":"VAE V2", "Purpose":"Probabilistic reconstruction + generation", "MSE":"0.0281680", "PSNR":"15.9348", "SSIM":"0.290189", "FID":"321.358", "Inception Score":"—"},
+        {"Model":"Autoencoder", "Purpose":"Reconstruction + compression", "MSE":"0.00353242", "PSNR":"25.3077", "SSIM":"0.761558", "FID":"—", "Inception Score":"—"},
+        {"Model":"VAE V5", "Purpose":"Forensic reconstruction + anomaly analysis + generation", "MSE":"0.00106170", "PSNR":"31.3124", "SSIM":"0.950181", "FID":"N/A", "Inception Score":"—"},
         {"Model":"DCGAN", "Purpose":"Synthetic image generation", "MSE":"—", "PSNR":"—", "SSIM":"—", "FID":"169.88", "Inception Score":"2.95"},
     ])
     st.dataframe(comparison, hide_index=True, width="stretch")

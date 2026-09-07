@@ -19,6 +19,8 @@ data/raw/
 data/processed/
 
 # Model checkpoints
+checkpoints/best_vae_v5_forensic.pth.zip
+
 
 
 # Generated outputs
