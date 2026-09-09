@@ -8,9 +8,9 @@ The current review build implements:
 
 1. a convolutional Autoencoder (AE), including a denoising experiment;
 2. a convolutional Variational Autoencoder (VAE), with baseline V1 and KL-warm-up V2 experiments; and
-3. a Deep Convolutional Generative Adversarial Network (DCGAN).
+3. a patch-based Transformer Forensic Autoencoder V2.
 
-The repository also contains evaluation scripts, saved experimental results, faculty-demo notebooks, and a Streamlit interface. It does **not** yet implement a complete forensic intelligence-generation system. Transformer and Diffusion components are future work, not current features.
+The repository retains the completed DCGAN and its artifacts for later use, but GAN is temporarily removed from the main GUI. The project does **not** yet implement a complete forensic intelligence-generation system. Diffusion remains future work.
 
 ## 2. Current Project Status
 
@@ -23,9 +23,9 @@ The repository also contains evaluation scripts, saved experimental results, fac
 | VAE V5 forensic | **Current / completed** | Authentic-only reconstruction learning and exploratory anomaly analysis |
 | DCGAN | Completed | Adversarial generation of 64×64 synthetic images |
 | Quantitative evaluation | Completed | Reconstruction metrics, KL, FID, and Inception Score where applicable |
-| Streamlit GUI | Completed | Cached inference and interactive demonstrations for AE, VAE V5, and DCGAN |
+| Streamlit GUI | Completed | Cached inference for AE, VAE V5 Final, and Transformer V2 |
 | Auxiliary ResNet-18 classifier notebook | Experimental | Separate real-vs-fake classification study; not part of the generative pipeline or GUI |
-| Transformer | Planned | Future sequence/context component |
+| Transformer V2 | **Current / completed** | Patch-attention reconstruction and exploratory anomaly analysis |
 | Diffusion model | Planned | Future image-generation component |
 | Integrated intelligence generation | Planned | Future multi-model reasoning and reporting layer |
 
@@ -252,6 +252,10 @@ FID is Fréchet Inception Distance, for which lower is generally better. Incepti
 
 ## 8. Quantitative Model Comparison
 
+### Transformer V2 in the current GUI
+
+Transformer V2 converts each 128×128 RGB image into 64 non-overlapping 16×16 patches. It uses embedding dimension 256, eight attention heads, four encoder layers, two decoder layers, and feed-forward dimension 512. The supplied epoch-50 checkpoint records training MSE 0.00256850, best validation MSE 0.00206004, anomaly threshold 0.00440391, and reconstruction-error ROC-AUC 0.545534. This indicates limited separation: reconstruction error is an exploratory forensic indicator, not a tampering probability or confirmed detector.
+
 | Metric | AE | VAE V5 | DCGAN |
 | --- | ---: | ---: | ---: |
 | MSE ↓ | 0.00353242 | 0.00106170 | N/A |
@@ -276,7 +280,7 @@ Run <code>app.py</code> to open five tabs:
 1. **Project Overview** — CASIA counts and cards explaining each generative model.
 2. **Autoencoder** — accepts JPG, JPEG, PNG, BMP, TIF, and TIFF images; reconstructs at 128×128; displays original/reconstruction, MSE, PSNR, SSIM, compression, and parameter count.
 3. **VAE V5** — reconstructs an uploaded image using deterministic <code>z=μ</code> and encoder skips, displays reconstruction metrics with an anomaly-analysis disclaimer, and can sample a synthetic image from <code>N(0,I)</code>.
-4. **GAN** — requires no uploaded image; generates a selectable grid of one to eight samples from random 100-dimensional noise and displays stored FID/IS information.
+4. **Transformer V2** — accepts an uploaded image; displays its reconstruction, MSE, PSNR, SSIM, reconstruction-error indicator, saved reference threshold, and patch-attention visualization.
 5. **Model Comparison** — summarizes model objectives and metrics, with a warning that different objectives require different metrics.
 
 Models are loaded once with <code>@st.cache_resource</code>, automatically use CUDA when available, switch to evaluation mode, and perform inference without gradients. The wrappers report missing checkpoints, invalid uploads, unsupported formats, and model-load failures through readable Streamlit messages.
@@ -285,8 +289,7 @@ The GUI currently loads:
 
 - <code>checkpoints/best_autoencoder.pth</code>;
 - <code>checkpoints/VAE_V5_FINAL.pth</code>;
-- <code>checkpoints/best_generator.pth</code>; and
-- <code>checkpoints/best_discriminator.pth</code>.
+- <code>checkpoints/transformer_v2_final.pth</code>.
 
 All generated images are synthetic research outputs and are **not genuine forensic evidence**.
 
@@ -584,8 +587,9 @@ The auxiliary classifier notebook also contains DataLoader multiprocessing clean
 | <code>checkpoints/best_vae.pth</code> | Fixed-β VAE V1 baseline | No |
 | <code>checkpoints/best_vae_v2.pth</code> | Historical KL-warm-up VAE V2, best epoch 43 | No |
 | <code>checkpoints/VAE_V5_FINAL.pth</code> | Current mixed-data VAE V5 Final reconstruction checkpoint | **Yes** |
-| <code>checkpoints/best_generator.pth</code> | Final trained DCGAN generator state | Yes |
-| <code>checkpoints/best_discriminator.pth</code> | Final trained DCGAN discriminator state | Loaded for model validation/information |
+| <code>checkpoints/transformer_v2_final.pth</code> | Current Transformer Forensic Autoencoder V2 | **Yes** |
+| <code>checkpoints/best_generator.pth</code> | Preserved trained DCGAN generator | No |
+| <code>checkpoints/best_discriminator.pth</code> | Preserved trained DCGAN discriminator | No |
 
 The repository also contains a duplicate denoising checkpoint under <code>results/</code>; the canonical inference path is the checkpoint-directory file shown above.
 
@@ -602,7 +606,7 @@ Ready for faculty review:
 - VAE/DCGAN distribution-level generation metrics;
 - saved model checkpoints, histories, plots, and sample grids;
 - complete AE, VAE, and GAN faculty-demo notebooks; and
-- a unified Streamlit inference and comparison dashboard.
+- a unified AE/VAE/Transformer Streamlit inference and comparison dashboard.
 
 The auxiliary ResNet-18 notebook is preserved as a separate exploratory classifier and is not presented as a completed generative-model deliverable.
 
@@ -610,10 +614,9 @@ The auxiliary ResNet-18 notebook is preserved as a separate exploratory classifi
 
 The implementation roadmap is explicitly separated from current functionality:
 
-1. **Current phase:** AE, denoising AE, VAE, DCGAN, evaluations, notebooks, and GUI.
-2. **Future phase:** Transformer-based component for contextual or sequence-level processing.
-3. **Future phase:** Diffusion-based image-generation experiment.
-4. **Future phase:** integrated multi-model digital-evidence analysis and richer intelligence generation.
+1. **Current phase:** AE, denoising AE, VAE, Transformer V2, evaluations, notebooks, and GUI; DCGAN remains preserved outside the GUI.
+2. **Future phase:** Diffusion-based image-generation experiment.
+3. **Future phase:** integrated multi-model digital-evidence analysis and richer intelligence generation.
 
 Potential model improvements include stronger VAE encoders/decoders, carefully validated perceptual or hybrid reconstruction losses, improved GAN stabilization, higher output resolution, cross-dataset validation, domain-aware alternatives to generic Inception metrics, forensic feature analysis, and calibrated comparisons with future Transformer/Diffusion modules.
 

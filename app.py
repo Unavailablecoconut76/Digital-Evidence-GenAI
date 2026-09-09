@@ -5,6 +5,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+import matplotlib.pyplot as plt
 import pandas as pd
 import streamlit as st
 import torch
@@ -15,7 +16,7 @@ ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT / "src"))
 
 from ae_inference import AutoencoderInference
-from gan_inference import GANInference
+from transformer_inference import TransformerInference
 from vae_inference import VAEInference
 
 
@@ -35,11 +36,10 @@ def load_vae() -> VAEInference:
     )
 
 
-@st.cache_resource(show_spinner="Loading GAN checkpoints…")
-def load_gan() -> GANInference:
-    return GANInference(
-        ROOT / "checkpoints" / "best_generator.pth",
-        ROOT / "checkpoints" / "best_discriminator.pth", DEVICE, 100,
+@st.cache_resource(show_spinner="Loading Transformer V2 checkpoint…")
+def load_transformer() -> TransformerInference:
+    return TransformerInference(
+        ROOT / "checkpoints" / "transformer_v2_final.pth", DEVICE
     )
 
 
@@ -84,7 +84,7 @@ st.markdown("""
 .notice {border-left:4px solid #176b87;padding:.65rem .9rem;background:#eff8fa;border-radius:6px;}
 </style>
 <div class="hero"><h1>Digital Evidence Generative AI Framework</h1>
-<p>Autoencoder • Variational Autoencoder • GAN</p></div>
+<p>Autoencoder • Variational Autoencoder • Transformer</p></div>
 """, unsafe_allow_html=True)
 
 with st.sidebar:
@@ -95,8 +95,8 @@ with st.sidebar:
     st.code(torch.cuda.get_device_name(0) if torch.cuda.is_available() else "CPU")
     st.info("Generated images are synthetic research outputs, not genuine forensic evidence.")
 
-overview_tab, ae_tab, vae_tab, gan_tab, comparison_tab = st.tabs([
-    "Project Overview", "Autoencoder", "VAE", "GAN", "Model Comparison"
+overview_tab, ae_tab, vae_tab, transformer_tab, comparison_tab = st.tabs([
+    "Project Overview", "Autoencoder", "VAE", "Transformer", "Model Comparison"
 ])
 
 with overview_tab:
@@ -107,7 +107,7 @@ with overview_tab:
     cards = st.columns(3)
     cards[0].markdown('<div class="model-card"><h3>Autoencoder</h3><p>Image reconstruction and 24× latent compression.</p></div>', unsafe_allow_html=True)
     cards[1].markdown('<div class="model-card"><h3>VAE V5 Final</h3><p>High-quality reconstruction, exploratory anomaly analysis, and probabilistic generation.</p></div>', unsafe_allow_html=True)
-    cards[2].markdown('<div class="model-card"><h3>DCGAN</h3><p>Adversarial synthetic forensic-image generation.</p></div>', unsafe_allow_html=True)
+    cards[2].markdown('<div class="model-card"><h3>Transformer V2</h3><p>Patch-attention reconstruction and exploratory anomaly analysis.</p></div>', unsafe_allow_html=True)
     st.markdown('<div class="notice">Authentic/tampered labels support exploratory comparisons only. Reconstruction error alone does not prove forgery.</div>', unsafe_allow_html=True)
 
 with ae_tab:
@@ -164,39 +164,68 @@ with vae_tab:
                 )
             except Exception as exc: st.error(f"VAE generation failed: {exc}")
 
-with gan_tab:
-    st.subheader("DCGAN Synthetic Generation")
-    st.caption("No uploaded image is required. Latent noise is sampled from N(0,I).")
-    gan, gan_error = safe_load(load_gan, "GAN")
-    if gan_error: st.error(gan_error)
+with transformer_tab:
+    st.subheader("Transformer V2 — Reconstruction and Attention Analysis")
+    st.caption("RGB 128×128 • 16×16 patches • tensor in [0,1]")
+    transformer, transformer_error = safe_load(load_transformer, "Transformer V2")
+    if transformer_error:
+        st.error(transformer_error)
     else:
-        model_info = st.columns(3)
-        model_info[0].metric("Latent dimension", "100")
-        model_info[1].metric("Generator parameters", "3,576,704")
-        model_info[2].metric("Discriminator parameters", "2,765,568")
-        quality = st.columns(2); quality[0].metric("Final FID ↓", "169.88"); quality[1].metric("Inception Score ↑", "2.95 ± 0.13")
-        count = st.slider("Number of samples", 1, 8, 1)
-        if st.button("Generate Synthetic Evidence Image", type="primary", key="gan_generate"):
+        architecture = st.columns(3)
+        architecture[0].metric("Patches", "64 (8×8)")
+        architecture[1].metric("Embedding dimension", "256")
+        architecture[2].metric("Attention heads", "8")
+        layers = st.columns(2)
+        layers[0].metric("Encoder layers", "4")
+        layers[1].metric("Decoder layers", "2")
+        upload = st.file_uploader(
+            "Upload an image for Transformer reconstruction",
+            type=["jpg", "jpeg", "png", "bmp", "tif", "tiff"],
+            key="transformer_upload",
+        )
+        image = uploaded_image(upload)
+        if image is not None:
             try:
-                samples = gan.generate(count)
-                columns = st.columns(min(count, 4))
-                for index, sample in enumerate(samples):
-                    columns[index % len(columns)].image(sample, caption=f"Synthetic GAN image {index + 1}", width="stretch", clamp=True)
-                st.warning("Synthetic GAN-generated research images — not genuine forensic evidence.")
-            except Exception as exc: st.error(f"GAN generation failed: {exc}")
+                original, reconstructed, metrics, latent, attention = transformer.reconstruct(image)
+                left, right = st.columns(2)
+                left.image(original, caption="Original image", width="stretch")
+                right.image(reconstructed, caption="Transformer reconstruction", width="stretch", clamp=True)
+                metric_cards(metrics)
+                indicators = st.columns(2)
+                indicators[0].metric("Reconstruction error", f"{metrics['reconstruction_error']:.6f}")
+                indicators[1].metric("Reference threshold", f"{metrics['anomaly_threshold']:.6f}")
+                figure, axes = plt.subplots(1, 2, figsize=(9, 4))
+                axes[0].imshow(attention, cmap="viridis")
+                axes[0].set_title("8×8 patch attention")
+                axes[1].imshow(original.resize((128, 128)))
+                axes[1].imshow(
+                    Image.fromarray((attention * 255).astype("uint8")).resize((128, 128)),
+                    cmap="jet", alpha=0.45,
+                )
+                axes[1].set_title("Attention overlay")
+                for axis in axes: axis.axis("off")
+                figure.tight_layout()
+                st.pyplot(figure)
+                plt.close(figure)
+                st.warning(
+                    "Reconstruction error and attention are exploratory forensic indicators. "
+                    "They are not tampering probabilities and do not confirm manipulation."
+                )
+            except Exception as exc:
+                st.error(f"Transformer inference failed: {exc}")
 
 with comparison_tab:
     st.subheader("Model Comparison")
     comparison = pd.DataFrame([
         {"Model":"Autoencoder", "Purpose":"Reconstruction + compression", "MSE":"0.00353242", "PSNR":"25.3077", "SSIM":"0.761558", "FID":"—", "Inception Score":"—"},
         {"Model":"VAE V5 Final", "Purpose":"Reconstruction + exploratory anomaly analysis + generation", "MSE":"0.00070007", "PSNR":"32.9535", "SSIM":"0.961139", "FID":"N/A", "Inception Score":"—"},
-        {"Model":"DCGAN", "Purpose":"Synthetic image generation", "MSE":"—", "PSNR":"—", "SSIM":"—", "FID":"169.88", "Inception Score":"2.95"},
+        {"Model":"Transformer V2", "Purpose":"Patch-attention reconstruction + anomaly indicator", "MSE":"0.002060*", "PSNR":"N/A", "SSIM":"N/A", "FID":"—", "Inception Score":"—"},
     ])
     st.dataframe(comparison, hide_index=True, width="stretch")
-    st.caption("VAE V5 Final metrics are from the canonical 1,892-image CASIA test split. Its MSE ROC-AUC is 0.5154, so reconstruction error is not a reliable tampering classifier.")
+    st.caption("*Transformer MSE is its saved best validation MSE. Its saved reconstruction-error ROC-AUC is 0.5455, indicating limited forensic separation.")
     st.info("These metrics measure different model objectives and should not all be compared directly.")
     with st.expander("Interpretation"):
-        st.write("AE/VAE reconstruction metrics compare an output with its input. FID compares real and generated feature distributions. Inception Score evaluates generated-image confidence and diversity using an external classifier.")
+        st.write("AE, VAE, and Transformer reconstruction metrics compare output images with their inputs. Their reconstruction errors measure reconstruction behavior, not tampering probability.")
 
 st.divider()
-st.caption("Semester 7 Generative AI Project • CASIA v2.0 • Faculty demonstration interface")
+st.caption(".")
