@@ -21,6 +21,9 @@ data/processed/
 # Model checkpoints
 checkpoints/best_vae_v5_forensic.pth.zip
 
+# Archived/obsolete local artifacts
+bin/
+
 
 
 # Generated outputs

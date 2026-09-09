@@ -252,7 +252,7 @@ def evaluate(args: argparse.Namespace) -> dict[str, object]:
         fid_warning = None
 
     metrics: dict[str, object] = {
-        "model": "VAEV5 authentic-only forensic reconstruction",
+        "model": "VAEV5 final mixed-data reconstruction",
         "checkpoint": str(args.checkpoint_path),
         "checkpoint_metadata": {
             key: checkpoint.get(key) for key in (
@@ -289,13 +289,13 @@ def evaluate(args: argparse.Namespace) -> dict[str, object]:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--splits-dir", type=Path, default=Path("data/splits"))
-    parser.add_argument("--checkpoint-path", type=Path, default=Path("checkpoints/best_vae_v5_forensic.pth"))
-    parser.add_argument("--metrics-path", type=Path, default=Path("results/vae_v5_test_metrics.json"))
-    parser.add_argument("--per-image-path", type=Path, default=Path("results/vae_v5_test_per_image_metrics.csv"))
-    parser.add_argument("--grid-path", type=Path, default=Path("outputs/vae_v5/reconstruction_grid.png"))
-    parser.add_argument("--error-plot-path", type=Path, default=Path("outputs/vae_v5/authentic_vs_tampered_error.png"))
-    parser.add_argument("--roc-plot-path", type=Path, default=Path("outputs/vae_v5/roc_curves.png"))
-    parser.add_argument("--generated-path", type=Path, default=Path("outputs/vae_v5/generated_samples.png"))
+    parser.add_argument("--checkpoint-path", type=Path, default=Path("checkpoints/VAE_V5_FINAL.pth"))
+    parser.add_argument("--metrics-path", type=Path, default=Path("results/vae_v5_final_test_metrics.json"))
+    parser.add_argument("--per-image-path", type=Path, default=Path("results/vae_v5_final_test_per_image_metrics.csv"))
+    parser.add_argument("--grid-path", type=Path, default=Path("outputs/vae_v5_final/reconstruction_grid.png"))
+    parser.add_argument("--error-plot-path", type=Path, default=Path("outputs/vae_v5_final/authentic_vs_tampered_error.png"))
+    parser.add_argument("--roc-plot-path", type=Path, default=Path("outputs/vae_v5_final/roc_curves.png"))
+    parser.add_argument("--generated-path", type=Path, default=Path("outputs/vae_v5_final/generated_samples.png"))
     parser.add_argument("--image-size", type=int, default=128)
     parser.add_argument("--batch-size", type=int, default=32)
     parser.add_argument("--num-workers", type=int, default=0)

@@ -1,1 +1,1 @@
-checkpoints/best_vae_v5_forensic.pth filter=lfs diff=lfs merge=lfs -text
+checkpoints/VAE_V5_FINAL.pth filter=lfs diff=lfs merge=lfs -text

@@ -28,10 +28,10 @@ def load_ae() -> AutoencoderInference:
     return AutoencoderInference(ROOT / "checkpoints" / "best_autoencoder.pth", DEVICE)
 
 
-@st.cache_resource(show_spinner="Loading forensic VAE V5 checkpoint…")
+@st.cache_resource(show_spinner="Loading final VAE V5 checkpoint…")
 def load_vae() -> VAEInference:
     return VAEInference(
-        ROOT / "checkpoints" / "best_vae_v5_forensic.pth", DEVICE, 256
+        ROOT / "checkpoints" / "VAE_V5_FINAL.pth", DEVICE, 256
     )
 
 
@@ -106,7 +106,7 @@ with overview_tab:
     st.markdown("This system demonstrates complementary generative AI techniques for digital image evidence analysis, reconstruction, compression, probabilistic representation, and synthetic generation.")
     cards = st.columns(3)
     cards[0].markdown('<div class="model-card"><h3>Autoencoder</h3><p>Image reconstruction and 24× latent compression.</p></div>', unsafe_allow_html=True)
-    cards[1].markdown('<div class="model-card"><h3>VAE V5</h3><p>Forensic reconstruction, anomaly analysis, and probabilistic generation.</p></div>', unsafe_allow_html=True)
+    cards[1].markdown('<div class="model-card"><h3>VAE V5 Final</h3><p>High-quality reconstruction, exploratory anomaly analysis, and probabilistic generation.</p></div>', unsafe_allow_html=True)
     cards[2].markdown('<div class="model-card"><h3>DCGAN</h3><p>Adversarial synthetic forensic-image generation.</p></div>', unsafe_allow_html=True)
     st.markdown('<div class="notice">Authentic/tampered labels support exploratory comparisons only. Reconstruction error alone does not prove forgery.</div>', unsafe_allow_html=True)
 
@@ -132,8 +132,8 @@ with ae_tab:
             except Exception as exc: st.error(f"AE reconstruction failed: {exc}")
 
 with vae_tab:
-    st.subheader("VAE V5 — Forensic Reconstruction and Anomaly Analysis")
-    st.caption("Authentic-only reconstruction learning • RGB 128×128 • [0,1]")
+    st.subheader("VAE V5 Final — Reconstruction and Exploratory Analysis")
+    st.caption("Final mixed-data reconstruction checkpoint • RGB 128×128 • [0,1]")
     vae, vae_error = safe_load(load_vae, "VAE V5")
     if vae_error: st.error(vae_error)
     else:
@@ -189,10 +189,11 @@ with comparison_tab:
     st.subheader("Model Comparison")
     comparison = pd.DataFrame([
         {"Model":"Autoencoder", "Purpose":"Reconstruction + compression", "MSE":"0.00353242", "PSNR":"25.3077", "SSIM":"0.761558", "FID":"—", "Inception Score":"—"},
-        {"Model":"VAE V5", "Purpose":"Forensic reconstruction + anomaly analysis + generation", "MSE":"0.00106170", "PSNR":"31.3124", "SSIM":"0.950181", "FID":"N/A", "Inception Score":"—"},
+        {"Model":"VAE V5 Final", "Purpose":"Reconstruction + exploratory anomaly analysis + generation", "MSE":"0.00070007", "PSNR":"32.9535", "SSIM":"0.961139", "FID":"N/A", "Inception Score":"—"},
         {"Model":"DCGAN", "Purpose":"Synthetic image generation", "MSE":"—", "PSNR":"—", "SSIM":"—", "FID":"169.88", "Inception Score":"2.95"},
     ])
     st.dataframe(comparison, hide_index=True, width="stretch")
+    st.caption("VAE V5 Final metrics are from the canonical 1,892-image CASIA test split. Its MSE ROC-AUC is 0.5154, so reconstruction error is not a reliable tampering classifier.")
     st.info("These metrics measure different model objectives and should not all be compared directly.")
     with st.expander("Interpretation"):
         st.write("AE/VAE reconstruction metrics compare an output with its input. FID compares real and generated feature distributions. Inception Score evaluates generated-image confidence and diversity using an external classifier.")

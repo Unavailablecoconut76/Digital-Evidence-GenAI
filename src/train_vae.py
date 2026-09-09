@@ -1,4 +1,4 @@
-"""Train the final authentic-only VAE V5 on the existing CASIA manifests."""
+"""Train VAE V5 on the existing CASIA manifests (mixed data by default)."""
 
 from __future__ import annotations
 
@@ -73,6 +73,28 @@ def authentic_loader(
     return loader, len(indices)
 
 
+def manifest_loader(
+    manifest: Path,
+    image_size: int,
+    batch_size: int,
+    num_workers: int,
+    shuffle: bool,
+    seed: int,
+) -> tuple[DataLoader[AESample], int]:
+    """Build a loader containing every image in an existing split manifest."""
+    dataset = AutoencoderImageDataset(manifest, image_size)
+    generator = torch.Generator().manual_seed(seed) if shuffle else None
+    loader = DataLoader(
+        dataset,
+        batch_size=batch_size,
+        shuffle=shuffle,
+        num_workers=num_workers,
+        pin_memory=torch.cuda.is_available(),
+        generator=generator,
+    )
+    return loader, len(dataset)
+
+
 def run_epoch(
     model: VAEV5,
     loader: DataLoader[AESample],
@@ -129,7 +151,7 @@ def run_epoch(
         count += batch_size
 
     if count == 0:
-        raise RuntimeError("No authentic images were processed")
+        raise RuntimeError("No images were processed")
     return {key: value / count for key, value in totals.items()}
 
 
@@ -168,18 +190,21 @@ def save_curves(history: list[dict[str, float | int]], path: Path) -> None:
 def train(args: argparse.Namespace) -> dict[str, object]:
     set_seed(args.seed)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    train_loader, train_count = authentic_loader(
+    loader_factory = authentic_loader if args.training_scope == "authentic_only" else manifest_loader
+    train_loader, train_count = loader_factory(
         args.splits_dir / "train.csv", args.image_size, args.batch_size,
         args.num_workers, True, args.seed,
     )
-    validation_loader, validation_count = authentic_loader(
+    validation_loader, validation_count = loader_factory(
         args.splits_dir / "validation.csv", args.image_size, args.batch_size,
         args.num_workers, False, args.seed,
     )
-    if train_count != args.expected_train_authentic or validation_count != args.expected_validation_authentic:
+    expected_train = 5244 if args.training_scope == "authentic_only" else 8830
+    expected_validation = 1124 if args.training_scope == "authentic_only" else 1892
+    if train_count != expected_train or validation_count != expected_validation:
         raise AssertionError(
-            f"Authentic counts are {train_count}/{validation_count}, expected "
-            f"{args.expected_train_authentic}/{args.expected_validation_authentic}"
+            f"Split counts are {train_count}/{validation_count}, expected "
+            f"{expected_train}/{expected_validation} for {args.training_scope}"
         )
 
     model = VAEV5(args.latent_dim).to(device)
@@ -249,7 +274,7 @@ def train(args: argparse.Namespace) -> dict[str, object]:
                     "image_size": args.image_size,
                     "l1_weight": args.l1_weight,
                     "beta": beta,
-                    "training_scope": "authentic_only",
+                    "training_scope": args.training_scope,
                 },
                 checkpoint_path,
             )
@@ -265,15 +290,15 @@ def train(args: argparse.Namespace) -> dict[str, object]:
     save_history(history, args.history_path)
     save_curves(history, args.curve_path)
     summary = {
-        "model": "VAEV5 authentic-only forensic reconstruction",
+        "model": f"VAEV5 {args.training_scope} reconstruction",
         "device": torch.cuda.get_device_name(0) if torch.cuda.is_available() else "CPU",
         "epochs_completed": len(history),
         "best_epoch": best_epoch,
         "best_validation_mse": best_mse,
         "best_validation_psnr": -10.0 * math.log10(max(best_mse, 1e-12)),
         "training_seconds": training_seconds,
-        "authentic_train_images": train_count,
-        "authentic_validation_images": validation_count,
+        "train_images": train_count,
+        "validation_images": validation_count,
         "checkpoint_path": str(checkpoint_path),
         "config": {
             "image_size": args.image_size, "batch_size": args.batch_size,
@@ -294,10 +319,10 @@ def train(args: argparse.Namespace) -> dict[str, object]:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--splits-dir", type=Path, default=Path("data/splits"))
-    parser.add_argument("--checkpoint-path", type=Path, default=Path("checkpoints/best_vae_v5_forensic.pth"))
-    parser.add_argument("--history-path", type=Path, default=Path("results/vae_v5_training_history.csv"))
-    parser.add_argument("--summary-path", type=Path, default=Path("results/vae_v5_training_summary.json"))
-    parser.add_argument("--curve-path", type=Path, default=Path("outputs/vae_v5/training_curves.png"))
+    parser.add_argument("--checkpoint-path", type=Path, default=Path("checkpoints/VAE_V5_FINAL.pth"))
+    parser.add_argument("--history-path", type=Path, default=Path("results/vae_v5_final_training_history.csv"))
+    parser.add_argument("--summary-path", type=Path, default=Path("results/vae_v5_final_training_summary.json"))
+    parser.add_argument("--curve-path", type=Path, default=Path("outputs/vae_v5_final/training_curves.png"))
     parser.add_argument("--image-size", type=int, default=128)
     parser.add_argument("--batch-size", type=int, default=32)
     parser.add_argument("--num-workers", type=int, default=0)
@@ -310,8 +335,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--beta-end", type=float, default=DEFAULT_BETA_END)
     parser.add_argument("--l1-weight", type=float, default=DEFAULT_L1_WEIGHT)
     parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--expected-train-authentic", type=int, default=5244)
-    parser.add_argument("--expected-validation-authentic", type=int, default=1124)
+    parser.add_argument("--training-scope", choices=("mixed", "authentic_only"), default="mixed")
     parser.add_argument("--smoke-test", action="store_true")
     parser.add_argument("--smoke-batches", type=int, default=2)
     return parser.parse_args()

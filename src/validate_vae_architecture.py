@@ -12,7 +12,7 @@ from vae import VAEV5, vae_v5_loss
 
 def validate() -> dict[str, object]:
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    checkpoint_path = Path("checkpoints/best_vae_v5_forensic.pth")
+    checkpoint_path = Path("checkpoints/VAE_V5_FINAL.pth")
     checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=True)
     latent_dim = int(checkpoint["latent_dim"])
     model = VAEV5(latent_dim).to(device)

@@ -1,6 +1,6 @@
 {
   "model": "VAEV5",
-  "checkpoint": "checkpoints\\best_vae_v5_forensic.pth",
+  "checkpoint": "checkpoints\\VAE_V5_FINAL.pth",
   "input_shape": [
     2,
     3,
@@ -34,24 +34,24 @@
   "latent_dim": 256,
   "total_parameters": 17599971,
   "losses": {
-    "total": 0.15451566874980927,
-    "reconstruction": 0.15451472997665405,
-    "mse": 0.07709218561649323,
-    "l1": 0.23193728923797607,
-    "kl": 0.0031153857707977295
+    "total": 0.1540500670671463,
+    "reconstruction": 0.15404728055000305,
+    "mse": 0.07710086554288864,
+    "l1": 0.23099370300769806,
+    "kl": 0.009310901165008545
   },
   "output_range": [
-    0.0605914369225502,
-    0.9000071883201599
+    0.04299333319067955,
+    0.8980658650398254
   ],
   "missing_keys": [],
   "unexpected_keys": [],
   "finite": true,
   "checkpoint_metadata": {
-    "epoch": 80,
-    "val_mse": 0.0014090144694401648,
-    "val_psnr": 28.5108454701431,
-    "val_kl": 0.002013940324350608
+    "epoch": 79,
+    "val_mse": 0.0009786994070952746,
+    "val_psnr": 30.093506747804902,
+    "val_kl": 0.008678044643386978
   },
   "device": "cpu"
 }

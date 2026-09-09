@@ -148,7 +148,7 @@ The AE is **not trained or validated as a forgery classifier**. Differences betw
 
 ### Purpose and architecture
 
-The current VAE is **VAE V5 — Forensic Reconstruction and Anomaly Analysis**. It learns reconstruction from authentic training/validation images only, then compares reconstruction behavior on the untouched mixed test split. It is an anomaly-analysis module, not a calibrated tampering classifier.
+The current VAE is **VAE V5 Final — Reconstruction and Exploratory Anomaly Analysis**. Its current checkpoint comes from the mixed CASIA reconstruction experiment. Reconstruction behavior can be compared between authentic and tampered images, but it is not a calibrated tampering classifier.
 
 VAE V5 processes 3×128×128 RGB inputs through four convolutional stages (32, 64, 128, and 256 channels). Residual blocks, GroupNorm, and SiLU activations are used throughout. Separate fully connected heads produce 256-dimensional μ and log-variance vectors. The decoder combines a latent projection with encoder skip features, bilinear upsampling, convolutional residual blocks, and a final Sigmoid output.
 
@@ -179,9 +179,9 @@ Total = Reconstruction + β × KL
 
 ### Training configuration and checkpoint provenance
 
-The source notebook specifies 80 fixed epochs, AdamW, learning rate 0.0001, weight decay 0.00001, batch size 32, gradient clipping at 1.0, ReduceLROnPlateau, no early stopping, and checkpoint selection by authentic-validation MSE.
+The source experiment uses AdamW, learning rate 0.0001, weight decay 0.00001, batch size 32, gradient clipping at 1.0, a 20-epoch KL warm-up, and checkpoint selection by validation MSE.
 
-The notebook's stored output reports best epoch 18, validation MSE 0.002313, and PSNR 26.36 dB. However, the checkpoint actually supplied to this repository records **epoch 80**, validation MSE **0.001409014**, validation PSNR **28.510845 dB**, and validation KL **0.00201394**. The application uses the checkpoint metadata and documents the notebook figures only as historical provenance.
+The current `VAE_V5_FINAL.pth` checkpoint records **epoch 79**, validation MSE **0.000978699**, validation PSNR **30.093507 dB**, and validation KL **0.00867804**. Historical authentic-only and V1/V2 checkpoints are preserved locally under the Git-ignored `bin/` archive.
 
 ### Canonical test evaluation
 
@@ -189,11 +189,11 @@ The current checkpoint was evaluated deterministically on the repository's exact
 
 | Group | MSE ↓ | PSNR ↑ | SSIM ↑ | Mean KL |
 | --- | ---: | ---: | ---: | ---: |
-| Overall (1,892) | **0.00106170** | **31.3124 dB** | **0.950181** | 0.00198055 |
-| Authentic (1,123) | 0.00089763 | 31.8360 dB | 0.952742 | 0.00186138 |
-| Tampered (769) | 0.00130129 | 30.5479 dB | 0.946442 | 0.00215458 |
+| Overall (1,892) | **0.00070007** | **32.9535 dB** | **0.961139** | 0.01292955 |
+| Authentic (1,123) | 0.00070925 | 33.0049 dB | 0.962650 | 0.01816685 |
+| Tampered (769) | 0.00068667 | 32.8783 dB | 0.958932 | 0.00528134 |
 
-Reconstruction-MSE ROC-AUC is **0.604618** and SSIM-error ROC-AUC is **0.593219**. The error distributions overlap substantially. These values show limited exploratory separation and do not make VAE V5 a reliable standalone forgery detector or turn reconstruction error into a tampering probability.
+For the current final checkpoint, reconstruction-MSE ROC-AUC is **0.515382** and SSIM-error ROC-AUC is **0.570558**. The error distributions overlap substantially. These values show weak exploratory separation and do not make VAE V5 a reliable standalone forgery detector or turn reconstruction error into a tampering probability.
 
 The large notebook did not calculate a valid final V5 FID. The clean evaluation script supports opt-in FID with <code>--run-fid</code>, but the current V5 FID remains **N/A** rather than reusing the old V2 value.
 
@@ -201,7 +201,7 @@ Although the model defines a probabilistic latent and prior-sampling path, the t
 
 ### Historical baselines
 
-VAE V1 and V2 checkpoints/results remain in the repository for comparison. V2 previously reported MSE 0.02816802, PSNR 15.9348 dB, SSIM 0.290189, and FID 321.358307. They are no longer the current GUI model.
+VAE V1, V2, and authentic-only forensic results remain as historical records. Their large checkpoints are kept in the local Git-ignored `bin/checkpoints/` archive and are not used by the GUI.
 
 ## 7. DCGAN
 
@@ -284,7 +284,7 @@ Models are loaded once with <code>@st.cache_resource</code>, automatically use C
 The GUI currently loads:
 
 - <code>checkpoints/best_autoencoder.pth</code>;
-- <code>checkpoints/best_vae_v5_forensic.pth</code>;
+- <code>checkpoints/VAE_V5_FINAL.pth</code>;
 - <code>checkpoints/best_generator.pth</code>; and
 - <code>checkpoints/best_discriminator.pth</code>.
 
@@ -488,13 +488,12 @@ Not every metric applies to every model. Reconstruction metrics and distribution
 - Test MSE / PSNR / SSIM: 0.00353242 / 25.3077 dB / 0.761558
 - Recorded run: 46 epochs completed on Tesla T4 in 1,906.4 seconds
 
-### VAE V5 forensic
+### VAE V5 Final
 
-- Current checkpoint metadata: epoch 80, validation MSE 0.001409014, PSNR 28.510845 dB, KL 0.00201394
-- Source-notebook stored run: best epoch 18, validation MSE 0.002313, PSNR 26.36 dB
-- Canonical test MSE / PSNR / SSIM: 0.00106170 / 31.3124 dB / 0.950181
-- Test KL / hybrid total loss: 0.00198055 / 0.01129045
-- Reconstruction-MSE / SSIM-error ROC-AUC: 0.604618 / 0.593219
+- Current checkpoint metadata: epoch 79, validation MSE 0.000978699, PSNR 30.093507 dB, KL 0.00867804
+- Canonical test MSE / PSNR / SSIM: 0.00070007 / 32.9535 dB / 0.961139
+- Test KL / hybrid total loss: 0.01292955 / 0.00889963
+- Reconstruction-MSE / SSIM-error ROC-AUC: 0.515382 / 0.570558
 - FID: N/A; the source notebook did not contain a valid final V5 calculation
 
 ### DCGAN
@@ -544,7 +543,7 @@ Because <code>outputs/</code> is currently ignored by Git, these embedded images
 
 ### Model limitations
 
-- VAE V5 reconstructs strongly through encoder skip connections, but its MSE ROC-AUC of 0.604618 still provides only limited authentic/tampered separation.
+- VAE V5 reconstructs strongly through encoder skip connections, but its MSE ROC-AUC of 0.515382 provides almost no useful authentic/tampered ranking by MSE alone.
 - The V5 decoder was trained with image skip features. Prior generation has no source-image skips, uses zero-valued skips, and currently produces visually degenerate dark samples; reconstruction quality and generation quality must not be conflated.
 - A valid final V5 FID is not currently available.
 - DCGAN samples capture coarse visual structure but have limited sharpness and realism. Final loss behavior is consistent with a comparatively strong discriminator, although generator and discriminator losses cannot be compared directly.
@@ -584,7 +583,7 @@ The auxiliary classifier notebook also contains DataLoader multiprocessing clean
 | <code>checkpoints/best_denoising_autoencoder.pth</code> | Gaussian-noise denoising AE experiment | No |
 | <code>checkpoints/best_vae.pth</code> | Fixed-β VAE V1 baseline | No |
 | <code>checkpoints/best_vae_v2.pth</code> | Historical KL-warm-up VAE V2, best epoch 43 | No |
-| <code>checkpoints/best_vae_v5_forensic.pth</code> | Current authentic-only forensic reconstruction VAE V5 | **Yes** |
+| <code>checkpoints/VAE_V5_FINAL.pth</code> | Current mixed-data VAE V5 Final reconstruction checkpoint | **Yes** |
 | <code>checkpoints/best_generator.pth</code> | Final trained DCGAN generator state | Yes |
 | <code>checkpoints/best_discriminator.pth</code> | Final trained DCGAN discriminator state | Loaded for model validation/information |
 
@@ -597,7 +596,7 @@ Ready for faculty review:
 - verified CASIA inventory and fixed train/validation/test manifests;
 - modular PyTorch data pipelines;
 - trained standard and denoising AEs;
-- historical VAE V1/V2 baselines and the current authentic-only VAE V5;
+- historical VAE baselines and the current mixed-data VAE V5 Final;
 - trained DCGAN generator and discriminator;
 - full-test reconstruction results and per-image CSVs;
 - VAE/DCGAN distribution-level generation metrics;

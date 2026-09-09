@@ -1,4 +1,4 @@
-"""Reusable inference wrapper for the final forensic reconstruction VAE V5."""
+"""Reusable inference wrapper for the current final VAE V5 checkpoint."""
 
 from __future__ import annotations
 
