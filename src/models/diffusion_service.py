@@ -263,6 +263,8 @@ class DiffusionService:
                 self.model_id,
                 torch_dtype=dtype,
                 use_safetensors=True,
+                safety_checker=None,
+                feature_extractor=None,
                 local_files_only=local_files_only,
             )
         except Exception as exc:
