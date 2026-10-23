@@ -16,3 +16,5 @@ transformers>=4.46,<6
 sentencepiece>=0.2
 pypdf>=5.0
 safetensors>=0.4
+diffusers>=0.31,<0.36
+accelerate>=1.0

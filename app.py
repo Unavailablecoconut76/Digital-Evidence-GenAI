@@ -15,12 +15,52 @@ from PIL import Image, UnidentifiedImageError
 
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT / "src"))
+sys.path.insert(0, str(ROOT))
 
-from ae_inference import AutoencoderInference
-from document_parser import DocumentParseError, MAX_EVIDENCE_BYTES, parse_evidence_file
-from evidence_transformer import DEFAULT_PROMPT, EvidenceModelError, EvidenceTransformer
-from transformer_inference import TransformerInference
-from vae_inference import VAEInference
+try:
+    from src.ae_inference import AutoencoderInference
+    from src.document_parser import DocumentParseError, MAX_EVIDENCE_BYTES, parse_evidence_file
+    from src.evidence_transformer import DEFAULT_PROMPT, EvidenceModelError, EvidenceTransformer
+    from src.transformer_inference import TransformerInference
+    from src.vae_inference import VAEInference
+    from src.diffusion_service import (
+        DEFAULT_GUIDANCE_SCALE,
+        DEFAULT_INFERENCE_STEPS,
+        DEFAULT_SEED,
+        DIFFUSION_MODEL_ID,
+        PRESET_SCENARIOS,
+        SYNTHETIC_DISCLAIMER_TEXT,
+        DiffusionGenerationConfig,
+        DiffusionGenerationResult,
+        DiffusionModelMissingError,
+        DiffusionService,
+        DiffusionServiceError,
+        apply_synthetic_watermark,
+        load_canonical_gallery,
+        log_generation_event,
+    )
+except ImportError:
+    from ae_inference import AutoencoderInference
+    from document_parser import DocumentParseError, MAX_EVIDENCE_BYTES, parse_evidence_file
+    from evidence_transformer import DEFAULT_PROMPT, EvidenceModelError, EvidenceTransformer
+    from transformer_inference import TransformerInference
+    from vae_inference import VAEInference
+    from diffusion_service import (
+        DEFAULT_GUIDANCE_SCALE,
+        DEFAULT_INFERENCE_STEPS,
+        DEFAULT_SEED,
+        DIFFUSION_MODEL_ID,
+        PRESET_SCENARIOS,
+        SYNTHETIC_DISCLAIMER_TEXT,
+        DiffusionGenerationConfig,
+        DiffusionGenerationResult,
+        DiffusionModelMissingError,
+        DiffusionService,
+        DiffusionServiceError,
+        apply_synthetic_watermark,
+        load_canonical_gallery,
+        log_generation_event,
+    )
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 SUPPORTED_SUFFIXES = {".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff"}
@@ -78,6 +118,15 @@ def load_transformer():
 @st.cache_resource(show_spinner="Loading pretrained evidence Transformer…")
 def load_evidence_transformer():
     return EvidenceTransformer(device=DEVICE)
+
+
+@st.cache_resource(show_spinner="Initializing Stable Diffusion service…")
+def load_diffusion():
+    return DiffusionService(
+        model_id=DIFFUSION_MODEL_ID,
+        checkpoint_unet_path=configured_checkpoint("DIFFUSION_UNET_PATH", "checkpoints/Diffusion_UNet.pth"),
+        device=DEVICE,
+    )
 
 
 @st.cache_data
@@ -258,7 +307,7 @@ def processing_consent(key: str) -> bool:
 
 
 def clear_session_evidence() -> int:
-    prefixes = ("ae_", "vae_", "transformer_", "evidence_")
+    prefixes = ("ae_", "vae_", "transformer_", "evidence_", "diffusion_")
     keys = [key for key in st.session_state if key.startswith(prefixes)]
     for key in keys:
         del st.session_state[key]
@@ -277,6 +326,7 @@ with st.sidebar:
             "Variational Autoencoder",
             "Vision Transformer",
             "Evidence Intelligence Transformer",
+            "Synthetic Evidence Generation (Diffusion)",
             "Model Evaluation",
             "Privacy & Ethical AI",
             "Project Information",
@@ -291,7 +341,7 @@ with st.sidebar:
     st.caption("CASIA v2.0 · 12,614 images")
     st.caption("Academic research prototype")
 
-st.markdown("""<div class="hero"><div class="eyebrow">Multi-model generative AI framework</div><h1>Digital Evidence Analysis and Intelligence Generation</h1><p>Deterministic, probabilistic, and attention-based image reconstruction plus pretrained Transformer assistance for text and PDF evidence.</p></div>""", unsafe_allow_html=True)
+st.markdown("""<div class="hero"><div class="eyebrow">Multi-model generative AI framework</div><h1>Digital Evidence Analysis and Intelligence Generation</h1><p>Deterministic, probabilistic, and attention-based image reconstruction, pretrained Diffusion scenario simulation, and pretrained Transformer assistance for text and PDF evidence.</p></div>""", unsafe_allow_html=True)
 
 
 if page == "Project Overview":
@@ -300,11 +350,12 @@ if page == "Project Overview":
     for column, label, value in zip(counts, ["CASIA images", "Authentic", "Tampered", "Held-out test"], ["12,614", "7,491", "5,123", "1,892"]):
         column.metric(label, value)
     st.markdown("### Current model modules")
-    cards = st.columns(4, gap="large")
-    cards[0].markdown('<div class="model-card"><span class="tag">Deterministic</span><h3>Quality Autoencoder</h3><p>Residual high-fidelity reconstruction through a genuine 6Ã— latent bottleneck.</p></div>', unsafe_allow_html=True)
+    cards = st.columns(5, gap="medium")
+    cards[0].markdown('<div class="model-card"><span class="tag">Deterministic</span><h3>Quality Autoencoder</h3><p>Residual high-fidelity reconstruction through a genuine 6× latent bottleneck.</p></div>', unsafe_allow_html=True)
     cards[1].markdown('<div class="model-card"><span class="tag">Probabilistic</span><h3>VAE V5 Final</h3><p>256-dimensional probabilistic representation with high-quality skip-connected reconstruction.</p></div>', unsafe_allow_html=True)
     cards[2].markdown('<div class="model-card"><span class="tag">Attention</span><h3>Transformer V2</h3><p>Patch-token reconstruction with interpretable learned attention relationships.</p></div>', unsafe_allow_html=True)
     cards[3].markdown('<div class="model-card"><span class="tag">Pretrained SLM</span><h3>Evidence Intelligence</h3><p>Token-aware assistance for pasted text and digitally extractable PDF evidence.</p></div>', unsafe_allow_html=True)
+    cards[4].markdown('<div class="model-card"><span class="tag">Pretrained Diffusion</span><h3>Synthetic Evidence</h3><p>Controlled forensic incident scenario generation and benchmark simulation.</p></div>', unsafe_allow_html=True)
     st.markdown("### Analysis workflow")
     st.markdown('<div class="workflow">Upload → RGB preprocessing → reconstruction → MSE · PSNR · SSIM → exploratory interpretation</div>', unsafe_allow_html=True)
     st.markdown('<div class="guardrail"><b>Interpretation boundary:</b> reconstruction error, thresholds, difference maps, and attention are not proof of manipulation and must not be treated as legal or forensic conclusions.</div>', unsafe_allow_html=True)
@@ -639,6 +690,315 @@ elif page == "Evidence Intelligence Transformer":
     )
 
 
+elif page == "Synthetic Evidence Generation (Diffusion)":
+    heading(
+        "Generative module · scenario simulation",
+        "Synthetic Evidence Generation (Diffusion)",
+        "Generate controlled synthetic forensic incident scenes using pretrained Stable Diffusion 1.5. Visualizes investigative hypotheses, produces synthetic benchmark data, and enables stress-testing of analytical models.",
+    )
+    info = st.columns(4)
+    info[0].metric("Base model", "Stable Diffusion 1.5")
+    info[1].metric("Total parameters", "1,066,235,307 (~1.07B)")
+    info[2].metric("Resolution", "512 × 512 RGB")
+    info[3].metric("Provenance", "Pretrained (No team training)")
+
+    st.markdown(
+        '<div class="workflow">Forensic text prompt → CLIP Text Encoder (77×768) → Iterative U-Net Latent Denoising (CFG 7.5) → VAE Decoder (512×512) → Digital Provenance Watermark</div>',
+        unsafe_allow_html=True,
+    )
+    model_specification(
+        [
+            ("Base architecture", "Latent Diffusion Model (LDM) — Stable Diffusion 1.5 (RunwayML / Stability AI)"),
+            ("Training status", "Pretrained foundation model (100% off-the-shelf; not custom-trained or fine-tuned by team)"),
+            ("Primary role", "Synthetic digital evidence scenario generation and controlled analytical benchmark simulation"),
+            ("Model components", "CLIP Text Encoder (123.1M) + UNet Denoiser (859.5M) + VAE Decoder (83.7M) ≈ 1.07B params"),
+            ("Latent space", "4 channels × 64 × 64 (8× spatial downsampling compression via AutoencoderKL)"),
+            ("Guidance mode", "Classifier-Free Guidance (CFG scale 7.5, extrapolating conditional from unconditional prior)"),
+            ("Denoising schedule", "PNDM / DDIM multi-step reverse denoising (typically 10–30 steps)"),
+            ("Checkpoint status", "checkpoints/Diffusion_UNet.pth contains the exported U-Net weights (859.5M FP16 params; 1.60 GB)"),
+            ("Output protection", "Permanent 'SYNTHETIC DIGITAL EVIDENCE · NOT GENUINE' provenance watermark on all exports"),
+            ("Forensic boundary", "Generates synthetic scenes; does not verify authenticity, detect tampering, or provide a forensic verdict"),
+        ]
+    )
+    st.markdown(
+        '<div class="guardrail"><b>Forensic boundary & ethics:</b> Images generated by this module are synthetic scenario simulations. They must never be presented as genuine digital evidence, cannot confirm that an incident occurred, and do not establish authenticity or detect manipulation.</div>',
+        unsafe_allow_html=True,
+    )
+
+    diffusion_consent = processing_consent("diffusion")
+
+    gen_tab, gallery_tab, arch_tab, log_tab = st.tabs([
+        "🎨 Generate Scenario",
+        "🖼️ Canonical Precomputed Gallery (Tesla T4 Benchmark)",
+        "📐 Architecture & Reverse Denoising",
+        "📋 Audit Findings & Generation Log",
+    ])
+
+    with gen_tab:
+        st.markdown("#### Scenario Configuration")
+        scenario_names = list(PRESET_SCENARIOS.keys()) + ["Custom Scenario Prompt"]
+        selected_preset = st.selectbox(
+            "Select a preset forensic incident template or write a custom scenario:",
+            scenario_names,
+            key="diffusion_scenario_preset",
+        )
+
+        default_prompt = ""
+        default_seed = DEFAULT_SEED
+        if selected_preset in PRESET_SCENARIOS:
+            preset_data = PRESET_SCENARIOS[selected_preset]
+            default_prompt = preset_data["prompt"]
+            default_seed = preset_data["seed"]
+            st.info(f"**{preset_data['title']}:** {preset_data['description']}")
+
+        prompt_text = st.text_area(
+            "Forensic scene prompt",
+            value=default_prompt,
+            height=110,
+            placeholder="Describe the incident scene (e.g., damaged vehicles, broken windows, scattered documents, road debris)…",
+            key="diffusion_prompt_input",
+            disabled=not diffusion_consent,
+        )
+
+        with st.expander("Advanced generation controls & hardware configuration", expanded=False):
+            col_a, col_b = st.columns(2)
+            with col_a:
+                negative_prompt = st.text_input(
+                    "Negative prompt (elements to suppress)",
+                    value="distorted, blurry, low quality, cartoon, 3d render, illustration, cgi, watermark, signature, text, people, faces",
+                    key="diffusion_negative_prompt",
+                    disabled=not diffusion_consent,
+                )
+                recommended_steps = 25 if torch.cuda.is_available() else 15
+                num_steps = st.slider(
+                    "Inference denoising steps",
+                    min_value=5,
+                    max_value=50,
+                    value=recommended_steps,
+                    step=5,
+                    key="diffusion_steps_slider",
+                    help="Higher steps refine high-frequency details but increase generation latency proportionally.",
+                    disabled=not diffusion_consent,
+                )
+            with col_b:
+                cfg_scale = st.slider(
+                    "Guidance scale (CFG)",
+                    min_value=1.0,
+                    max_value=15.0,
+                    value=DEFAULT_GUIDANCE_SCALE,
+                    step=0.5,
+                    key="diffusion_cfg_slider",
+                    help="How strongly the generation adheres to the prompt. 7.0–8.0 is standard for Stable Diffusion 1.5.",
+                    disabled=not diffusion_consent,
+                )
+                seed_col, rand_col = st.columns([3, 1])
+                with seed_col:
+                    gen_seed = st.number_input(
+                        "Random seed",
+                        min_value=0,
+                        max_value=2_147_483_647,
+                        value=default_seed,
+                        step=1,
+                        key="diffusion_seed_input",
+                        disabled=not diffusion_consent,
+                    )
+                with rand_col:
+                    st.write("")
+                    st.write("")
+                    if st.button("🎲 Random", key="diffusion_randomize_seed", disabled=not diffusion_consent):
+                        gen_seed = int(time.time() % 1_000_000)
+                        st.session_state["diffusion_seed_input"] = gen_seed
+
+            capture_latent_snaps = st.checkbox(
+                "Capture intermediate reverse-denoising latents (displays progressive emergence of scene geometry)",
+                value=True,
+                key="diffusion_capture_latents",
+                disabled=not diffusion_consent,
+            )
+
+        # Hardware runtime notification
+        if torch.cuda.is_available():
+            vram_gb = round(torch.cuda.get_device_properties(0).total_memory / (1024**3), 1)
+            st.caption(f"⚡ GPU Acceleration: {torch.cuda.get_device_name(0)} ({vram_gb} GB VRAM) · FP16 precision enabled.")
+        else:
+            st.warning(
+                "ℹ️ **CPU Environment Active:** Live generation on CPU executes in 32-bit floating point and typically takes 1–3 minutes per image. "
+                "For instantaneous review, see the **Canonical Precomputed Gallery** tab for verified Tesla T4 outputs."
+            )
+
+        generate_btn = st.button(
+            "🚀 Generate Synthetic Incident Scene",
+            type="primary",
+            disabled=not diffusion_consent or not prompt_text.strip(),
+            key="diffusion_generate_btn",
+        )
+
+        if generate_btn and diffusion_consent:
+            service = load_diffusion()
+            config = DiffusionGenerationConfig(
+                prompt=prompt_text.strip(),
+                negative_prompt=negative_prompt.strip(),
+                num_inference_steps=int(num_steps),
+                guidance_scale=float(cfg_scale),
+                seed=int(gen_seed),
+                capture_intermediates=capture_latent_snaps,
+            )
+
+            progress_bar = st.progress(0)
+            status_text = st.empty()
+
+            def on_progress(step: int, total: int, msg: str) -> None:
+                pct = int((step / max(1, total)) * 100)
+                progress_bar.progress(min(100, pct))
+                status_text.text(msg)
+
+            try:
+                with st.spinner("Generating synthetic scene with Stable Diffusion 1.5…"):
+                    result = service.generate(config, progress_callback=on_progress)
+
+                progress_bar.progress(100)
+                status_text.empty()
+                st.session_state["active_diffusion_result"] = result
+
+                # Append generation audit log
+                log_file = ROOT / "outputs" / "diffusion" / "generation_log.csv"
+                log_generation_event(result, log_file)
+
+            except DiffusionModelMissingError as exc:
+                progress_bar.empty()
+                status_text.empty()
+                st.error(f"Model Loading Error: {exc}")
+                st.info(
+                    "To generate live images, Stable Diffusion 1.5 foundation weights must be downloaded from Hugging Face Hub. "
+                    "In the meantime, you can inspect the verified canonical outputs in the **Canonical Precomputed Gallery** tab."
+                )
+            except Exception as exc:
+                progress_bar.empty()
+                status_text.empty()
+                st.error(f"Generation failure: {exc}")
+
+        # Render active or stored result
+        active_res = st.session_state.get("active_diffusion_result")
+        if active_res is not None:
+            st.markdown("### Generated Synthetic Evidence Scene")
+            img_left, img_right = st.columns([2, 1], gap="large")
+            with img_left:
+                st.image(
+                    active_res.watermarked_image,
+                    caption=f"Synthetic Scene · Seed {active_res.seed} · {active_res.num_inference_steps} steps · CFG {active_res.guidance_scale}",
+                    width="stretch",
+                )
+            with img_right:
+                st.markdown("#### Generation Metadata")
+                st.metric("Generation latency", f"{active_res.generation_time_seconds:.2f} s")
+                if active_res.peak_gpu_memory_mb is not None:
+                    st.metric("Peak GPU memory", f"{active_res.peak_gpu_memory_mb:.1f} MB")
+                st.metric("Resolution", f"{active_res.resolution[0]} × {active_res.resolution[1]}")
+                st.metric("Inference steps", f"{active_res.num_inference_steps}")
+                st.caption(f"Device: {active_res.device} · Model: {active_res.model_id}")
+
+                # Download button
+                from io import BytesIO
+                buf = BytesIO()
+                active_res.watermarked_image.save(buf, format="PNG")
+                st.download_button(
+                    "💾 Download Watermarked Evidence Scene",
+                    data=buf.getvalue(),
+                    file_name=f"synthetic_evidence_seed_{active_res.seed}_{int(time.time())}.png",
+                    mime="image/png",
+                    key="download_diffusion_png",
+                )
+
+            # Progressive reverse denoising intermediate visualization
+            if active_res.intermediate_images:
+                st.markdown("#### 🔬 Reverse Diffusion: Latent Denoising in Action")
+                st.caption("Decoded intermediate latent tensors (4×64×64) showing progressive feature emergence through the VAE decoder:")
+                snap_cols = st.columns(len(active_res.intermediate_images))
+                for col, (step_num, snap_img) in zip(snap_cols, active_res.intermediate_images):
+                    with col:
+                        st.image(snap_img, caption=f"Step {step_num}", width="stretch")
+
+            st.markdown(
+                '<div class="success-note"><b>Provenance verified:</b> Output carries an embedded digital provenance watermark banner and has been logged to outputs/diffusion/generation_log.csv.</div>',
+                unsafe_allow_html=True,
+            )
+
+    with gallery_tab:
+        st.markdown("#### Verified Canonical Outputs (Tesla T4 GPU Benchmark)")
+        st.caption(
+            "These verified high-resolution artifacts were generated during the audited Google Colab run "
+            "on an NVIDIA Tesla T4 GPU (FP16 precision, PyTorch 2.11.0, Diffusers 0.35.1)."
+        )
+        gallery_items = load_canonical_gallery(ROOT / "outputs" / "diffusion")
+
+        if not gallery_items:
+            st.info("Canonical gallery artifacts are being prepared in outputs/diffusion/.")
+        else:
+            for item in gallery_items:
+                with st.expander(f"📷 {item['title']} ({item['category']})", expanded=(item["id"] == "scenes_comparison")):
+                    st.image(item["path"], caption=item["title"], width="stretch")
+                    st.write(item["description"])
+                    st.caption(f"Artifact: {item['filename']} · File size: {item['size_kb']} KB")
+
+        st.markdown("#### Measured Inference Latency vs. Step Count")
+        perf_data = pd.DataFrame([
+            {"Inference Steps": 10, "Generation Time (s)": 2.731, "Peak GPU Memory (MB)": 5929.44, "Hardware": "NVIDIA Tesla T4 (FP16)"},
+            {"Inference Steps": 20, "Generation Time (s)": 5.013, "Peak GPU Memory (MB)": 5929.44, "Hardware": "NVIDIA Tesla T4 (FP16)"},
+            {"Inference Steps": 25, "Generation Time (s)": 6.760, "Peak GPU Memory (MB)": 5929.44, "Hardware": "NVIDIA Tesla T4 (FP16)"},
+            {"Inference Steps": 30, "Generation Time (s)": 8.130, "Peak GPU Memory (MB)": 5929.44, "Hardware": "NVIDIA Tesla T4 (FP16)"},
+        ])
+        st.dataframe(perf_data, hide_index=True, width="stretch")
+        st.caption("Measurements conducted with CUDA synchronization and peak memory allocator tracking on 512×512 images.")
+
+    with arch_tab:
+        st.markdown("#### Latent Diffusion Model Architecture (Stable Diffusion 1.5)")
+        st.markdown(
+            """
+            Stable Diffusion operates in a **compressed latent space** rather than pixel space, achieving a $48\\times$ dimensional reduction:
+            
+            1. **Text Conditioning:** The text prompt is segmented into 77 Byte-Pair Encoding (BPE) tokens by `CLIPTokenizer` and mapped to continuous $(1, 77, 768)$ feature embeddings by `CLIPTextModel` (123.1M parameters).
+            2. **Latent Space Compression:** Instead of $3 \\times 512 \\times 512$ RGB pixels (786,432 values), the model operates on a $4 \\times 64 \\times 64$ latent tensor (16,384 values) compressed by the `AutoencoderKL` encoder ($8\\times$ spatial downsampling).
+            3. **Classifier-Free Guidance (CFG):** The U-Net evaluates two noise predictions at every step: an unconditional prior $\\epsilon_\\text{uncond}$ and a text-conditioned prediction $\\epsilon_\\text{cond}$. Extrapolating via $\\tilde{\\epsilon} = \\epsilon_\\text{uncond} + 7.5 \\times (\\epsilon_\\text{cond} - \\epsilon_\\text{uncond})$ steers generation tightly toward the prompt.
+            4. **Iterative Reverse Denoising:** The `UNet2DConditionModel` (859.5M FP16 parameters) predicts the residual Gaussian noise at timestep $t$. The noise scheduler subtracts the noise to compute $z_{t-1}$.
+            5. **VAE Decoding:** The final denoised latent $z_0$ is unscaled ($z_0 / 0.18215$) and passed through the `AutoencoderKL` decoder (83.7M parameters) to synthesize the full-resolution $512 \\times 512$ RGB image.
+            """
+        )
+        st.markdown("#### Forward vs. Reverse Diffusion Distinction")
+        diff_cols = st.columns(2, gap="large")
+        diff_cols[0].info(
+            "**Forward Diffusion (Noise Addition)**\n\n"
+            "A deterministic/Markovian process governed by a mathematical variance schedule ($\\beta_1, \\dots, \\beta_T$). "
+            "Gaussian noise is progressively added to an image until it degenerates into pure white noise $\\mathcal{N}(0, \\mathbf{I})$. "
+            "No neural network is needed for forward diffusion."
+        )
+        diff_cols[1].success(
+            "**Reverse Diffusion (Generative Denoising)**\n\n"
+            "An iterative estimation process where the U-Net neural network predicts and removes noise at each discrete timestep. "
+            "By conditioning on text embeddings via cross-attention, the network steers random noise into structured scene geometry and textures."
+        )
+
+    with log_tab:
+        st.markdown("#### Checkpoint Audit & Provenance Verification")
+        st.markdown(
+            """
+            * **Checkpoint File:** `checkpoints/Diffusion_UNet.pth` (1,719,273,871 bytes / 1.60 GB; SHA-256: `29ac918c...`).
+            * **Audit Finding:** The checkpoint contains **only the pretrained U-Net denoiser** (686 tensors, 859.52M parameters in `torch.float16`). It is an export of `pipe.unet.state_dict()` saved in Cell 14 of the audited notebook.
+            * **Scientific Accuracy:** The model was **not custom-trained or fine-tuned**. It is an official pretrained foundation model. All images in the notebook were generated by the Hugging Face pipeline before the `.pth` file was created.
+            * **Contaminated Metrics Resolved:** The notebook's blur-comparison metrics (MSE 0.00106 to 0.00834) tested Gaussian blur on sample stock images and accidentally blurred an output dashboard; they do not measure diffusion generation fidelity or forensic tampering detection.
+            """
+        )
+        st.markdown("#### Recent Generation Events Audit Log")
+        log_file = ROOT / "outputs" / "diffusion" / "generation_log.csv"
+        if log_file.is_file():
+            try:
+                log_df = pd.read_csv(log_file)
+                st.dataframe(log_df.tail(15), hide_index=True, width="stretch")
+            except Exception as exc:
+                st.caption(f"Audit log exists but could not be parsed: {exc}")
+        else:
+            st.caption("No live generation events recorded in this session yet. Events will appear here automatically.")
+
+
 elif page == "Model Evaluation":
     heading("Evidence-based comparison", "Model roles and measured outcomes", "Each architecture has a distinct objective. Reconstruction metrics compare output with input; they do not establish a single overall ranking or forensic validity.")
     try:
@@ -726,13 +1086,15 @@ else:
     details[2].metric("Demo samples", "24")
     st.markdown("### Implemented scope")
     st.write(
-        "Quality Autoencoder V1, VAE V5, trained Vision Transformer V2, and a separate pretrained "
-        "FLAN-T5 evidence-intelligence integration. GAN code/checkpoints remain preserved for the later phase."
+        "Quality Autoencoder V1, VAE V5, trained Vision Transformer V2, a separate pretrained "
+        "FLAN-T5 evidence-intelligence integration, and a pretrained Stable Diffusion 1.5 synthetic "
+        "evidence scenario generator. GAN code/checkpoints remain preserved for the later phase."
     )
     st.markdown("### Current boundaries")
     st.write(
-        "Diffusion is not implemented. No model is validated as a standalone forgery detector, and the "
-        "application does not make legal, authenticity, guilt, or admissibility decisions."
+        "Diffusion is integrated as a pretrained synthetic incident scenario generator (Stable Diffusion 1.5). "
+        "No model is validated as a standalone forgery detector, and the application does not make legal, "
+        "authenticity, guilt, or admissibility decisions."
     )
     st.markdown("### Runtime")
     st.code(f"Python · PyTorch {torch.__version__} · Streamlit {st.__version__} · device {DEVICE}")

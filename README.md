@@ -6,8 +6,9 @@ Semester 7 Generative AI project prepared for Review 2. The repository combines 
 2. Variational Autoencoder V5 — probabilistic latent representation, deterministic reconstruction, and image-conditioned stochastic reconstructions.
 3. Vision Transformer V2 — patch-token self-attention reconstruction and exploratory attention visualization.
 4. Evidence Intelligence Transformer — no-key pretrained FLAN-T5 integration for pasted text and digitally extractable PDFs.
+5. Synthetic Evidence Generation (Diffusion) — pretrained Stable Diffusion 1.5 integration for controlled forensic incident scenario simulation.
 
-The trained GAN implementation and checkpoints remain preserved for the later course phase but are intentionally absent from the current GUI. Diffusion is not implemented.
+The trained GAN implementation and checkpoints remain preserved for the later course phase but are intentionally absent from the current GUI.
 
 ## Responsible-use boundary
 
@@ -147,18 +148,36 @@ Features include:
 
 The default model is deliberately small for CPU/Streamlit portability, so output may be terse or extractive. It is a pretrained integration, not a language model trained from scratch by the team. A real local demo output and its measured runtime metadata are stored in `docs/results/evidence_transformer_demo.md`.
 
+### Synthetic Evidence Generation (Diffusion)
+
+- Base Model: Latent Diffusion Model — Stable Diffusion 1.5 (`stable-diffusion-v1-5/stable-diffusion-v1-5`)
+- Provenance: Pretrained foundation model (RunwayML / Stability AI); not custom-trained or fine-tuned by the team
+- Parameters: 1,066,235,307 (~1.07B parameters across CLIP text encoder, U-Net, and VAE)
+- Latent Compression: $8\times$ spatial compression ($512 \times 512 \times 3 \to 64 \times 64 \times 4$) via `AutoencoderKL`
+- Reverse Denoising: Iterative U-Net latent noise prediction with Classifier-Free Guidance (CFG scale 7.5)
+- Output Resolution: $512 \times 512$ RGB
+- Checkpoint: `checkpoints/Diffusion_UNet.pth` contains the exported pretrained U-Net denoiser (859.5M FP16 parameters; 1.60 GB; SHA-256: `29ac918c...`)
+- Features:
+  - Incident scenario presets (traffic collisions, office intrusions, roadside accidents, warehouse breaches);
+  - Reverse diffusion latent capture and progressive VAE decoding visualization (steps 1, 5, 10, 15, 20, 25);
+  - Permanent `SYNTHETIC DIGITAL EVIDENCE · NOT GENUINE` digital provenance watermark banner;
+  - Generation audit logging (`outputs/diffusion/generation_log.csv`);
+  - Verified precomputed canonical gallery from audited Tesla T4 benchmark runs (10 steps: 2.73s, 20 steps: 5.01s, 30 steps: 8.13s).
+- Boundary: Synthetic scenario simulation only. Does not classify images as authentic or tampered and does not issue forensic verdicts. Full technical audit: `DIFFUSION_IMPLEMENTATION_AUDIT.md`.
+
 ## Streamlit application
 
-The professional GUI has eight pages:
+The professional GUI has nine pages:
 
 1. Project Overview
 2. Autoencoder
 3. Variational Autoencoder
 4. Vision Transformer
 5. Evidence Intelligence Transformer
-6. Model Evaluation
-7. Privacy & Ethical AI
-8. Project Information
+6. Synthetic Evidence Generation (Diffusion)
+7. Model Evaluation
+8. Privacy & Ethical AI
+9. Project Information
 
 The three image pages support normal uploads and a browsable, reproducible 24-image canonical test gallery (12 authentic and 12 tampered) when local CASIA data is available. If raw data is absent, the app explains why the gallery is unavailable and retains manual upload. Model loading is cached, CPU fallback is automatic, and missing files/LFS pointers produce actionable errors.
 

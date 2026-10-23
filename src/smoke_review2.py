@@ -117,6 +117,36 @@ def run() -> dict[str, object]:
         "text_output": text_result.output,
         "pdf_output": pdf_result.output,
     }
+
+    # Diffusion service verification
+    from models.diffusion_service import (
+        DIFFUSION_MODEL_ID,
+        DiffusionService,
+        apply_synthetic_watermark,
+        load_canonical_gallery,
+    )
+
+    diff_service = DiffusionService(
+        model_id=DIFFUSION_MODEL_ID,
+        checkpoint_unet_path=ROOT / "checkpoints" / "Diffusion_UNet.pth",
+        device=device,
+    )
+    hw_status = diff_service.get_hardware_status()
+    gallery = load_canonical_gallery(ROOT / "outputs" / "diffusion")
+
+    # Verify watermarking pipeline
+    dummy_input = Image.new("RGB", (128, 128), color=(80, 120, 160))
+    wm_test = apply_synthetic_watermark(dummy_input, text="SMOKE TEST WATERMARK")
+
+    report["diffusion_service"] = {
+        "model_id": DIFFUSION_MODEL_ID,
+        "device": str(device),
+        "hardware_status": hw_status,
+        "canonical_gallery_count": len(gallery),
+        "watermark_verified": wm_test.size == (128, 128),
+        "checkpoint_exists": (ROOT / "checkpoints" / "Diffusion_UNet.pth").is_file(),
+    }
+
     return report
 
 

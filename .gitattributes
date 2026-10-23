@@ -1,2 +1,4 @@
 checkpoints/VAE_V5_FINAL.pth filter=lfs diff=lfs merge=lfs -text
 checkpoints/best_quality_autoencoder_v1.pth filter=lfs diff=lfs merge=lfs -text
+checkpoints/Diffusion_UNet.pth filter=lfs diff=lfs merge=lfs -text
+checkpoints/Transformer_Forensic_Autoencoder_Best_Model.pth filter=lfs diff=lfs merge=lfs -text
