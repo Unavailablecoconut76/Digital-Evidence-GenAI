@@ -108,10 +108,24 @@ st.markdown("""
 <style>
 :root {--navy:#071b2d;--cyan:#11a8c7;--ink:#122333;--muted:#5d7182;--line:#dbe7ef;--soft:#f4f8fb;}
 .block-container{max-width:1380px;padding-top:1.35rem;padding-bottom:3rem}
-[data-testid="stSidebar"]{background:linear-gradient(180deg,#071b2d 0%,#0b3658 100%)}
-[data-testid="stSidebar"] *{color:#edf7fb}[data-testid="stSidebar"] hr{border-color:rgba(255,255,255,.18)}
-[data-testid="stSidebar"] [data-testid="stRadio"] label{border-radius:9px;padding:.28rem .45rem}
-[data-testid="stSidebar"] [data-testid="stRadio"] label:hover{background:rgba(255,255,255,.09)}
+[data-testid="stSidebar"]{background:linear-gradient(180deg,#061525 0%,#0a2540 50%,#051322 100%) !important;border-right:1px solid rgba(0,212,255,.18) !important}
+[data-testid="stSidebar"] *{color:#edf7fb}[data-testid="stSidebar"] hr{border-color:rgba(255,255,255,.12)}
+.sidebar-brand-card{background:linear-gradient(135deg,rgba(0,212,255,.12) 0%,rgba(11,79,120,.35) 100%);border:1px solid rgba(0,212,255,.35);border-radius:14px;padding:1rem 1.1rem;margin-bottom:1.1rem;box-shadow:0 8px 24px rgba(0,0,0,.4),inset 0 1px 1px rgba(255,255,255,.2)}
+.sidebar-badge{display:inline-block;font-size:.65rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#00d4ff;background:rgba(0,212,255,.15);border:1px solid rgba(0,212,255,.4);border-radius:999px;padding:.18rem .6rem;margin-bottom:.45rem}
+.sidebar-brand-title{font-size:1.25rem;font-weight:850;color:#ffffff;line-height:1.2;margin:0;letter-spacing:-.01em;text-shadow:0 0 18px rgba(0,212,255,.35)}
+.sidebar-brand-sub{font-size:.78rem;color:#a4d4ea;margin-top:.25rem;line-height:1.35;font-weight:500}
+.sidebar-kicker{font-size:.70rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#00d4ff;margin:1.1rem 0 .45rem .2rem;display:flex;align-items:center;gap:.4rem}
+[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"]{gap:.35rem}
+[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] > label{background:rgba(255,255,255,.035) !important;border:1px solid rgba(255,255,255,.07) !important;border-radius:12px !important;padding:.58rem .95rem !important;margin:.12rem 0 !important;transition:all .22s cubic-bezier(.16,1,.3,1) !important;cursor:pointer !important;box-shadow:0 2px 6px rgba(0,0,0,.2) !important;display:flex !important;align-items:center !important}
+[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] > label:hover{background:linear-gradient(90deg,rgba(0,212,255,.15) 0%,rgba(11,79,120,.2) 100%) !important;border-color:rgba(0,212,255,.5) !important;transform:translateX(4px) !important;box-shadow:0 4px 16px rgba(0,212,255,.25) !important}
+[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] > label:has(input:checked){background:linear-gradient(90deg,rgba(0,212,255,.28) 0%,rgba(10,60,95,.45) 100%) !important;border:1px solid #00d4ff !important;border-left:4px solid #00d4ff !important;box-shadow:0 4px 18px rgba(0,212,255,.35),inset 0 1px 1px rgba(255,255,255,.2) !important}
+[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] > label > div:first-child{display:none !important}
+[data-testid="stSidebar"] [data-testid="stRadio"] label p{color:#d1ecf8 !important;font-size:.91rem !important;font-weight:600 !important;line-height:1.35 !important;margin:0 !important;letter-spacing:.01em !important}
+[data-testid="stSidebar"] [data-testid="stRadio"] label:has(input:checked) p{color:#ffffff !important;font-weight:800 !important;text-shadow:0 0 10px rgba(0,212,255,.4) !important}
+.sidebar-status-box{background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.09);border-radius:12px;padding:.85rem 1rem;margin-top:1rem;box-shadow:0 4px 12px rgba(0,0,0,.25)}
+.sidebar-status-pill{display:flex;align-items:center;gap:.45rem;font-size:.70rem;font-weight:800;color:#38ef7d;margin-bottom:.35rem;letter-spacing:.08em}
+.pulse-dot{width:8px;height:8px;border-radius:50%;background-color:#38ef7d;box-shadow:0 0 8px #38ef7d;animation:pulse-green 2s infinite}
+@keyframes pulse-green{0%{transform:scale(.95);box-shadow:0 0 0 0 rgba(56,239,125,.7)}70%{transform:scale(1.05);box-shadow:0 0 0 6px rgba(56,239,125,0)}100%{transform:scale(.95);box-shadow:0 0 0 0 rgba(56,239,125,0)}}
 .hero{position:relative;overflow:hidden;padding:2rem 2.2rem;border-radius:22px;background:linear-gradient(125deg,#071b2d 0%,#0b4f78 58%,#0b8298 100%);box-shadow:0 18px 45px rgba(7,27,45,.18);color:white;margin-bottom:1.4rem}
 .hero:after{content:"";position:absolute;width:280px;height:280px;right:-70px;top:-120px;border-radius:50%;border:45px solid rgba(255,255,255,.07)}
 .eyebrow,.section-kicker,.small-label{font-size:.75rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
@@ -360,49 +374,66 @@ def clear_session_evidence() -> int:
 
 
 with st.sidebar:
-    st.markdown("## 🔬 Digital Evidence AI")
-    st.caption("Semester 7 · Generative AI")
-    st.divider()
+    st.markdown("""
+    <div class="sidebar-brand-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.4rem;">
+            <span class="sidebar-badge">REVIEW 2 · SEMESTER 7</span>
+            <span style="font-size:0.68rem;color:#38ef7d;font-weight:750;letter-spacing:0.06em;">● ACTIVE</span>
+        </div>
+        <h2 class="sidebar-brand-title">🔬 Digital Evidence AI</h2>
+        <div class="sidebar-brand-sub">Multi-Model GenAI Framework</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown('<div class="sidebar-kicker">✦ Core Models (1–5) & Modules</div>', unsafe_allow_html=True)
     page = st.radio(
         "Navigate",
         [
-            "Project Overview",
-            "Autoencoder",
-            "Variational Autoencoder",
-            "GAN — Synthetic Image Generation",
-            "Vision Transformer",
-            "Evidence Intelligence Transformer",
-            "Synthetic Evidence Generation (Diffusion)",
-            "Model Evaluation",
-            "Privacy & Ethical AI",
-            "Project Information",
+            "📊 Project Overview",
+            "1. 🔬 Autoencoder",
+            "2. 🎲 Variational Autoencoder",
+            "3. ⚡ GAN",
+            "4. 🤖 Transformer",
+            "5. 🌊 Diffusion",
+            "📈 Model Evaluation",
+            "🛡️ Privacy & Ethical AI",
+            "ℹ️ Project Information",
         ],
         label_visibility="collapsed",
     )
-    st.divider()
-    st.markdown("**Runtime device**")
-    st.caption(torch.cuda.get_device_name(0) if torch.cuda.is_available() else "CPU")
-    st.caption("CUDA enabled" if torch.cuda.is_available() else "CUDA unavailable · CPU inference")
-    st.divider()
-    st.caption("CASIA v2.0 · 12,614 images")
-    st.caption("Academic research prototype")
+
+    st.markdown('<div class="sidebar-kicker">Engine & Dataset Status</div>', unsafe_allow_html=True)
+    device_name = torch.cuda.get_device_name(0) if torch.cuda.is_available() else "Host CPU"
+    device_sub = "⚡ CUDA FP16 Acceleration Active" if torch.cuda.is_available() else "💻 32-bit Host CPU Inference"
+    st.markdown(f"""
+    <div class="sidebar-status-box">
+        <div class="sidebar-status-pill">
+            <span class="pulse-dot"></span>
+            <span>PIPELINE OPERATIONAL</span>
+        </div>
+        <div style="font-weight:700;color:#ffffff;font-size:0.86rem;">{device_name}</div>
+        <div style="font-size:0.75rem;color:#8fe8f2;margin-top:2px;">{device_sub}</div>
+        <div style="border-top:1px solid rgba(255,255,255,0.09);margin:0.5rem 0;padding-top:0.4rem;font-size:0.74rem;color:#9ec9dd;">
+            📁 <b>Evidence Split:</b> CASIA v2.0 (12,614 images)
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
 st.markdown("""<div class="hero"><div class="eyebrow">Multi-model generative AI framework</div><h1>Digital Evidence Analysis and Intelligence Generation</h1><p>Deterministic, probabilistic, and attention-based image reconstruction, trained DCGAN synthetic patch generation, pretrained Diffusion incident simulation, and pretrained Transformer assistance for text and PDF evidence.</p></div>""", unsafe_allow_html=True)
 
 
-if page == "Project Overview":
-    heading("Project foundation", "A multi-model evidence research framework", "Four image architectures support reconstruction and adversarial synthesis research, a separate pretrained language Transformer assists with text evidence, and a pretrained Diffusion model simulates incident scenes. The application does not issue forensic verdicts.")
+if "Project Overview" in page:
+    heading("Project foundation", "A multi-model evidence research framework", "Five core Generative AI model architectures support reconstruction, probabilistic latent representation, adversarial patch synthesis, multimodal Transformer intelligence, and incident scene simulation. The application does not issue forensic verdicts.")
     counts = st.columns(4)
     for column, label, value in zip(counts, ["CASIA images", "Authentic", "Tampered", "Held-out test"], ["12,614", "7,491", "5,123", "1,892"]):
         column.metric(label, value)
-    st.markdown("### Current model modules")
-    cards = st.columns(6, gap="small")
-    cards[0].markdown('<div class="model-card"><span class="tag">Deterministic</span><h3>Quality Autoencoder</h3><p>Residual high-fidelity reconstruction through a genuine 6× latent bottleneck.</p></div>', unsafe_allow_html=True)
-    cards[1].markdown('<div class="model-card"><span class="tag">Probabilistic</span><h3>VAE V5 Final</h3><p>256-dimensional probabilistic representation with skip-connected reconstruction.</p></div>', unsafe_allow_html=True)
-    cards[2].markdown('<div class="model-card"><span class="tag">Adversarial</span><h3>DCGAN Generator</h3><p>Trained 64×64 CASIA synthetic patch synthesis from random latent noise vectors.</p></div>', unsafe_allow_html=True)
-    cards[3].markdown('<div class="model-card"><span class="tag">Attention</span><h3>Transformer V2</h3><p>Patch-token reconstruction with interpretable learned attention relationships.</p></div>', unsafe_allow_html=True)
-    cards[4].markdown('<div class="model-card"><span class="tag">Pretrained SLM</span><h3>Evidence Intelligence</h3><p>Token-aware assistance for pasted text and digitally extractable PDF evidence.</p></div>', unsafe_allow_html=True)
-    cards[5].markdown('<div class="model-card"><span class="tag">Pretrained Diffusion</span><h3>Synthetic Evidence</h3><p>Controlled forensic incident scenario generation and benchmark simulation.</p></div>', unsafe_allow_html=True)
+    st.markdown("### The 5 Core Model Families")
+    cards = st.columns(5, gap="medium")
+    cards[0].markdown('<div class="model-card"><span class="tag">01 · Deterministic</span><h3>1. Autoencoder</h3><p>Residual high-fidelity reconstruction through a genuine 6× latent bottleneck.</p></div>', unsafe_allow_html=True)
+    cards[1].markdown('<div class="model-card"><span class="tag">02 · Probabilistic</span><h3>2. Variational AE</h3><p>256-dimensional probabilistic representation with skip-connected reconstruction.</p></div>', unsafe_allow_html=True)
+    cards[2].markdown('<div class="model-card"><span class="tag">03 · Adversarial</span><h3>3. GAN</h3><p>Trained 64×64 CASIA synthetic patch synthesis from random latent noise vectors.</p></div>', unsafe_allow_html=True)
+    cards[3].markdown('<div class="model-card"><span class="tag">04 · Multimodal</span><h3>4. Transformer</h3><p>Unified suite: ViT V2 patch-token attention + FLAN-T5 text/PDF evidence intelligence.</p></div>', unsafe_allow_html=True)
+    cards[4].markdown('<div class="model-card"><span class="tag">05 · Diffusion</span><h3>5. Diffusion</h3><p>Controlled forensic incident scenario generation via Stable Diffusion 1.5.</p></div>', unsafe_allow_html=True)
     st.markdown("### Analysis workflow")
     st.markdown('<div class="workflow">Upload → RGB preprocessing → reconstruction → MSE · PSNR · SSIM → exploratory interpretation</div>', unsafe_allow_html=True)
     st.markdown('<div class="guardrail"><b>Interpretation boundary:</b> reconstruction error, thresholds, difference maps, and attention are not proof of manipulation and must not be treated as legal or forensic conclusions.</div>', unsafe_allow_html=True)
@@ -412,7 +443,7 @@ if page == "Project Overview":
         st.write("All inputs are RGB 128×128 tensors normalized to [0,1].")
 
 
-elif page == "Autoencoder":
+elif "Autoencoder" in page and "Variational" not in page:
     heading("Model 01 · deterministic reconstruction", "Quality Autoencoder V1", "Examine high-fidelity deterministic reconstruction from a residual Autoencoder with a genuine 6× latent bottleneck. Metrics compare input and reconstruction; the model does not predict a label.")
     info = st.columns(4)
     for column, label, value in zip(info, ["Input", "Latent", "Compression", "Parameters"], ["3×128×128", "32×16×16", "6×", "2,371,715"]):
@@ -455,7 +486,7 @@ elif page == "Autoencoder":
         st.caption("The preserved RTX-80 model used a stronger 24× compression ratio; this quality-focused model trades compression for substantially better reconstruction fidelity.")
 
 
-elif page == "Variational Autoencoder":
+elif "Variational Autoencoder" in page:
     heading("Model 02 · probabilistic reconstruction", "Variational Autoencoder V5 Final", "Compare the deterministic posterior mean with genuine image-conditioned samples from the learned 256-dimensional latent distribution.")
     info = st.columns(4)
     for column, label, value in zip(info, ["Input", "Latent", "Parameters", "Checkpoint epoch"], ["3×128×128", "256", "17,599,971", "79"]):
@@ -566,7 +597,7 @@ elif page == "Variational Autoencoder":
         st.write("MSE ROC-AUC 0.5154 indicates almost no useful tampering ranking by reconstruction error alone.")
 
 
-elif page == "GAN — Synthetic Image Generation":
+elif "GAN" in page:
     heading(
         "Model 03 · Adversarial Synthetic Generation",
         "DCGAN — Synthetic Image Generation",
@@ -881,178 +912,237 @@ elif page == "GAN — Synthetic Image Generation":
             st.caption("No generation events recorded yet. Synthesizing an image above will populate this log automatically.")
 
 
-elif page == "Vision Transformer":
-    heading("Model 04 · patch attention", "Transformer Forensic Autoencoder V2", "The image becomes 64 patch tokens. Self-attention models patch relationships while all encoded spatial tokens are retained for reconstruction.")
-    info = st.columns(4)
-    for column, label, value in zip(info, ["Input", "Patch size", "Patch tokens", "Embedding"], ["3×128×128", "16×16", "64", "256"]):
-        column.metric(label, value)
-    layers = st.columns(3)
-    for column, label, value in zip(layers, ["Attention heads", "Encoder layers", "Decoder layers"], ["8", "4", "2"]):
-        column.metric(label, value)
-    st.markdown('<div class="workflow">Image → 8×8 patch grid → attention encoder → token decoder → reconstruction + attention view</div>', unsafe_allow_html=True)
-    st.markdown("#### Verified canonical test result")
-    verified_test_cards("transformer_v2_test_metrics.json", "test_images")
-    model_specification(
-        [
-            ("Architecture", "Vision Transformer autoencoder: 64 patch tokens, 256-D embeddings, 8 heads"),
-            ("Input", "128×128 RGB image split into an 8×8 grid of 16×16 patches"),
-            ("Processing", "Patch embedding + position embedding → 4 encoder layers → 2 decoder layers"),
-            ("Output", "RGB reconstruction plus exploratory 8×8 attention visualization"),
-            ("Loss/objective", "Mean squared reconstruction error"),
-            ("Evaluation", "MSE, PSNR, SSIM, and exploratory ROC-AUC on the canonical test split"),
-            ("Role", "Patch-relationship reconstruction and attention exploration; not manipulation proof"),
-        ]
-    )
-    model, error = safe_load(load_transformer, "Transformer V2")
-    if error:
-        st.error(error)
-    else:
-        image = image_input("transformer_upload") if processing_consent("transformer") else None
-        if image is None and not st.session_state.get("transformer_processing_consent", False):
-            st.info("Confirm authorization and consent to enable evidence input.")
-        if image is not None:
-            try:
-                with st.spinner("Running patch-attention reconstruction…"):
-                    original, reconstructed, result, latent, attention = model.reconstruct(image)
-                compare_images(original, reconstructed, "Transformer V2 reconstruction")
-                metrics_cards(result)
-                st.markdown("#### Exploratory reconstruction indicator")
-                indicator = st.columns(3)
-                indicator[0].metric("Reconstruction error", f"{result['reconstruction_error']:.6f}")
-                indicator[1].metric("Reference threshold", f"{result['anomaly_threshold']:.6f}")
-                status = "Above reference range" if result["reconstruction_error"] > result["anomaly_threshold"] else "Within reference range"
-                indicator[2].metric("Indicator", status)
-                st.markdown("#### Patch-attention visualization")
-                figure, axes = plt.subplots(1, 2, figsize=(10, 4.2))
-                axes[0].imshow(attention, cmap="viridis"); axes[0].set_title("8×8 patch attention")
-                overlay = Image.fromarray((attention * 255).astype("uint8")).resize((128, 128), Image.Resampling.BILINEAR)
-                axes[1].imshow(original.resize((128, 128))); axes[1].imshow(overlay, cmap="jet", alpha=.45); axes[1].set_title("Attention overlay")
-                for axis in axes:
-                    axis.axis("off")
-                figure.tight_layout(); st.pyplot(figure); plt.close(figure)
-                st.markdown('<div class="guardrail"><b>Do not over-interpret:</b> this is not a tampering probability. Attention shows learned patch relationships and does not definitively localize manipulation.</div>', unsafe_allow_html=True)
-            except Exception as exc:
-                st.error(f"Transformer inference failed: {exc}")
-    with st.expander("Checkpoint and evaluation context"):
-        st.write("Epoch 50 · final training MSE 0.00256850 · best validation MSE 0.00206004.")
-        st.write("Saved reconstruction-error ROC-AUC 0.5455 indicates limited separation.")
-
-
-elif page == "Evidence Intelligence Transformer":
+elif "Transformer" in page:
     heading(
-        "Pretrained language model integration",
-        "Text/PDF Evidence Intelligence Transformer",
-        "Extract text, inspect tokenization, and use a no-key pretrained FLAN-T5 model to generate review-oriented observations. This module is separate from the trained Vision Transformer.",
+        "Model 04 · Multimodal Transformer Intelligence",
+        "Transformer Architecture: Vision & Language",
+        "Dual-modality Transformer suite: custom patch-token self-attention for digital evidence image reconstruction and attention analysis, paired with a tokenized Small Language Model (SLM) for text and PDF forensic intelligence.",
     )
-    st.markdown(
-        '<div class="workflow">TXT or digital PDF → in-memory extraction → token-aware chunks → tokenizer → pretrained Transformer → evidence-oriented output</div>',
-        unsafe_allow_html=True,
-    )
-    st.info(
-        "The language model is pretrained and integrated for this project; it was not trained from scratch by the team. "
-        "The first model load may download open-source weights."
-    )
-    model_specification(
-        [
-            ("Architecture", "Pretrained google/flan-t5-small encoder-decoder Transformer integration"),
-            ("Input", "Pasted text, UTF-8 TXT, or digitally extractable PDF up to 10 MB"),
-            ("Processing", "In-memory extraction → token-aware overlapping chunks → prompt → tokenizer/model"),
-            ("Output", "Structured evidence summary, entities, observations, relevance, and limitations"),
-            ("Loss/objective", "Pretrained seq2seq objective; no project fine-tuning or training claim"),
-            ("Evaluation", "Input/output tokens, processed chunks, truncation status, and inference time"),
-            ("Role", "AI-assisted evidence intelligence for human review; never a legal/forensic verdict"),
-        ]
-    )
-    evidence_consent = processing_consent("evidence")
 
-    source_tab, upload_tab = st.tabs(["Paste evidence text", "Upload TXT or PDF"])
-    evidence_text = ""
-    source_description = "Pasted text"
-    with source_tab:
-        pasted_text = st.text_area(
-            "Evidence text",
-            height=220,
-            placeholder="Paste a transcript, incident narrative, extracted message log, or other text evidence…",
-            key="evidence_pasted_text",
-            disabled=not evidence_consent,
-        )
-        if evidence_consent and pasted_text.strip():
-            evidence_text = pasted_text.strip()
-    with upload_tab:
-        evidence_upload = st.file_uploader(
-            "Choose evidence",
-            type=["txt", "pdf"],
-            key="evidence_document_upload",
-            help=f"TXT or digitally extractable PDF, up to {MAX_EVIDENCE_BYTES // (1024 * 1024)} MB.",
-            disabled=not evidence_consent,
-        )
-        if evidence_consent and evidence_upload is not None:
-            try:
-                parsed = parse_evidence_file(evidence_upload.name, evidence_upload.getvalue())
-                evidence_text = parsed.text
-                source_description = evidence_upload.name
-                page_detail = f" · {parsed.page_count} page(s)" if parsed.page_count is not None else ""
-                st.success(f"Extracted {parsed.character_count:,} characters{page_detail} in memory.")
-            except DocumentParseError as exc:
-                st.error(str(exc))
+    t_meta1, t_meta2, t_meta3, t_meta4 = st.columns(4)
+    t_meta1.metric("Vision Transformer", "ViT V2 Autoencoder")
+    t_meta2.metric("ViT Parameters", "2,139,139 (Custom)")
+    t_meta3.metric("Language Model", "FLAN-T5 Small (Pretrained)")
+    t_meta4.metric("SLM Parameters", "76,961,152 (Seq2Seq)")
 
-    if evidence_text:
-        with st.expander("Extracted evidence preview", expanded=True):
-            st.text(evidence_text[:4_000])
-            if len(evidence_text) > 4_000:
-                st.caption(f"Preview shows 4,000 of {len(evidence_text):,} characters; generation uses token-aware chunks.")
-        prompt = st.text_area(
-            "Analyst prompt",
-            value=DEFAULT_PROMPT,
-            height=180,
-            help="The default six-line prompt requests facts, entities, cautious observations, and limitations.",
+    vit_tab, flan_tab, theory_tab = st.tabs([
+        "👁️ Vision Transformer (ViT V2 — Image Reconstruction)",
+        "📄 Text/PDF Evidence Intelligence (FLAN-T5 — Document Analysis)",
+        "📐 Architecture & Multimodal Attention Theory",
+    ])
+
+    with vit_tab:
+        st.markdown("#### Patch Attention Image Reconstruction")
+        st.caption("The image is divided into 64 patch tokens (16×16 pixels each). Self-attention models pairwise patch relationships while all encoded spatial tokens are retained for reconstruction.")
+
+        info = st.columns(4)
+        for column, label, value in zip(info, ["Input", "Patch size", "Patch tokens", "Embedding"], ["3×128×128", "16×16", "64", "256"]):
+            column.metric(label, value)
+        layers = st.columns(3)
+        for column, label, value in zip(layers, ["Attention heads", "Encoder layers", "Decoder layers"], ["8", "4", "2"]):
+            column.metric(label, value)
+        st.markdown('<div class="workflow">Image → 8×8 patch grid → attention encoder → token decoder → reconstruction + attention view</div>', unsafe_allow_html=True)
+        st.markdown("##### Verified canonical test result")
+        verified_test_cards("transformer_v2_test_metrics.json", "test_images")
+        model_specification(
+            [
+                ("Architecture", "Vision Transformer autoencoder: 64 patch tokens, 256-D embeddings, 8 heads"),
+                ("Input", "128×128 RGB image split into an 8×8 grid of 16×16 patches"),
+                ("Processing", "Patch embedding + position embedding → 4 encoder layers → 2 decoder layers"),
+                ("Output", "RGB reconstruction plus exploratory 8×8 attention visualization"),
+                ("Loss/objective", "Mean squared reconstruction error"),
+                ("Evaluation", "MSE, PSNR, SSIM, and exploratory ROC-AUC on the canonical test split"),
+                ("Role", "Patch-relationship reconstruction and attention exploration; not manipulation proof"),
+            ]
         )
-        max_new_tokens = st.slider("Maximum generated tokens", 64, 384, 192, 32)
-        if st.button("Generate evidence intelligence", type="primary", disabled=not evidence_consent):
-            model, error = safe_load(load_evidence_transformer, "Evidence Transformer")
-            if error:
-                st.error(error)
-            else:
+        model, error = safe_load(load_transformer, "Transformer V2")
+        if error:
+            st.error(error)
+        else:
+            image = image_input("transformer_upload") if processing_consent("transformer") else None
+            if image is None and not st.session_state.get("transformer_processing_consent", False):
+                st.info("Confirm authorization and consent to enable evidence input.")
+            if image is not None:
                 try:
-                    with st.spinner("Tokenizing evidence and generating observations…"):
-                        result = model.generate(evidence_text, prompt, int(max_new_tokens))
-                    st.markdown("### Generated evidence intelligence")
-                    st.markdown(result.output)
-                    st.caption(
-                        "The Evidence Summary is generated by the pretrained Transformer. Entity and "
-                        "observation indicators are conservative source-text pattern matches added to "
-                        "reduce unsupported invention by the compact model."
-                    )
-                    if result.truncated:
-                        st.warning(
-                            f"Document limit reached: processed {result.chunks_processed} of "
-                            f"{result.chunks_available} chunks ({result.processed_tokens:,} of "
-                            f"{result.input_tokens:,} evidence tokens)."
-                        )
-                    metadata = st.columns(4)
-                    metadata[0].metric("Input tokens", f"{result.input_tokens:,}")
-                    metadata[1].metric("Processed chunks", f"{result.chunks_processed}/{result.chunks_available}")
-                    metadata[2].metric("Output tokens", f"{result.output_tokens:,}")
-                    metadata[3].metric("Inference time", f"{result.inference_seconds:.2f} s")
-                    st.caption(
-                        f"Source: {source_description} · Model: {result.model_id} · deterministic beam search"
-                    )
-                except (EvidenceModelError, ValueError) as exc:
-                    st.error(f"Evidence generation could not continue: {exc}")
+                    with st.spinner("Running patch-attention reconstruction…"):
+                        original, reconstructed, result, latent, attention = model.reconstruct(image)
+                    compare_images(original, reconstructed, "Transformer V2 reconstruction")
+                    metrics_cards(result)
+                    st.markdown("##### Exploratory reconstruction indicator")
+                    indicator = st.columns(3)
+                    indicator[0].metric("Reconstruction error", f"{result['reconstruction_error']:.6f}")
+                    indicator[1].metric("Reference threshold", f"{result['anomaly_threshold']:.6f}")
+                    status = "Above reference range" if result["reconstruction_error"] > result["anomaly_threshold"] else "Within reference range"
+                    indicator[2].metric("Indicator", status)
+                    st.markdown("##### Patch-attention visualization")
+                    figure, axes = plt.subplots(1, 2, figsize=(10, 4.2))
+                    axes[0].imshow(attention, cmap="viridis"); axes[0].set_title("8×8 patch attention")
+                    overlay = Image.fromarray((attention * 255).astype("uint8")).resize((128, 128), Image.Resampling.BILINEAR)
+                    axes[1].imshow(original.resize((128, 128))); axes[1].imshow(overlay, cmap="jet", alpha=.45); axes[1].set_title("Attention overlay")
+                    for axis in axes:
+                        axis.axis("off")
+                    figure.tight_layout(); st.pyplot(figure); plt.close(figure)
+                    st.markdown('<div class="guardrail"><b>Do not over-interpret:</b> this is not a tampering probability. Attention shows learned patch relationships and does not definitively localize manipulation.</div>', unsafe_allow_html=True)
                 except Exception as exc:
-                    st.error(f"Unexpected evidence-generation failure: {exc}")
-    else:
+                    st.error(f"Transformer inference failed: {exc}")
+        with st.expander("Checkpoint and evaluation context"):
+            st.write("Epoch 50 · final training MSE 0.00256850 · best validation MSE 0.00206004.")
+            st.write("Saved reconstruction-error ROC-AUC 0.5455 indicates limited separation.")
+
+    with flan_tab:
+        st.markdown("#### Text & PDF Evidence Intelligence Assistant")
+        st.caption("Extract text, inspect tokenization, and use a no-key pretrained FLAN-T5 model to generate review-oriented observations. This language module complements the spatial image Transformer.")
         st.markdown(
-            '<div class="upload-guide">Confirm authorization, then paste evidence text or upload a UTF-8 TXT/digitally extractable PDF.</div>',
+            '<div class="workflow">TXT or digital PDF → in-memory extraction → token-aware chunks → tokenizer → pretrained Transformer → evidence-oriented output</div>',
             unsafe_allow_html=True,
         )
-    st.markdown(
-        '<div class="guardrail"><b>Responsible use:</b> Research/educational use only. Verify generated observations against original evidence. Generated text may contain errors and must not be the sole legal or forensic basis.</div>',
-        unsafe_allow_html=True,
-    )
+        st.info(
+            "The language model is pretrained and integrated for this project; it was not trained from scratch by the team. "
+            "Inference runs locally using standard PyTorch sequence-to-sequence beam search."
+        )
+        model_specification(
+            [
+                ("Architecture", "Pretrained google/flan-t5-small encoder-decoder Transformer integration"),
+                ("Input", "Pasted text, UTF-8 TXT, or digitally extractable PDF up to 10 MB"),
+                ("Processing", "In-memory extraction → token-aware overlapping chunks → prompt → tokenizer/model"),
+                ("Output", "Structured evidence summary, entities, observations, relevance, and limitations"),
+                ("Loss/objective", "Pretrained seq2seq objective; no project fine-tuning or training claim"),
+                ("Evaluation", "Input/output tokens, processed chunks, truncation status, and inference time"),
+                ("Role", "AI-assisted evidence intelligence for human review; never a legal/forensic verdict"),
+            ]
+        )
+        evidence_consent = processing_consent("evidence")
+
+        source_tab, upload_tab = st.tabs(["Paste evidence text", "Upload TXT or PDF"])
+        evidence_text = ""
+        source_description = "Pasted text"
+        with source_tab:
+            pasted_text = st.text_area(
+                "Evidence text",
+                height=220,
+                placeholder="Paste a transcript, incident narrative, extracted message log, or other text evidence…",
+                key="evidence_pasted_text",
+                disabled=not evidence_consent,
+            )
+            if evidence_consent and pasted_text.strip():
+                evidence_text = pasted_text.strip()
+        with upload_tab:
+            evidence_upload = st.file_uploader(
+                "Choose evidence",
+                type=["txt", "pdf"],
+                key="evidence_document_upload",
+                help=f"TXT or digitally extractable PDF, up to {MAX_EVIDENCE_BYTES // (1024 * 1024)} MB.",
+                disabled=not evidence_consent,
+            )
+            if evidence_consent and evidence_upload is not None:
+                try:
+                    parsed = parse_evidence_file(evidence_upload.name, evidence_upload.getvalue())
+                    evidence_text = parsed.text
+                    source_description = evidence_upload.name
+                    page_detail = f" · {parsed.page_count} page(s)" if parsed.page_count is not None else ""
+                    st.success(f"Extracted {parsed.character_count:,} characters{page_detail} in memory.")
+                except DocumentParseError as exc:
+                    st.error(str(exc))
+
+        if evidence_text:
+            with st.expander("Extracted evidence preview", expanded=True):
+                st.text(evidence_text[:4_000])
+                if len(evidence_text) > 4_000:
+                    st.caption(f"Preview shows 4,000 of {len(evidence_text):,} characters; generation uses token-aware chunks.")
+            prompt = st.text_area(
+                "Analyst prompt",
+                value=DEFAULT_PROMPT,
+                height=180,
+                help="The default six-line prompt requests facts, entities, cautious observations, and limitations.",
+            )
+            max_new_tokens = st.slider("Maximum generated tokens", 64, 384, 192, 32)
+            if st.button("Generate evidence intelligence", type="primary", disabled=not evidence_consent):
+                model, error = safe_load(load_evidence_transformer, "Evidence Transformer")
+                if error:
+                    st.error(error)
+                else:
+                    try:
+                        with st.spinner("Tokenizing evidence and generating observations…"):
+                            result = model.generate(evidence_text, prompt, int(max_new_tokens))
+                        st.markdown("### Generated evidence intelligence")
+                        st.markdown(result.output)
+                        st.caption(
+                            "The Evidence Summary is generated by the pretrained Transformer. Entity and "
+                            "observation indicators are conservative source-text pattern matches added to "
+                            "reduce unsupported invention by the compact model."
+                        )
+                        if result.truncated:
+                            st.warning(
+                                f"Document limit reached: processed {result.chunks_processed} of "
+                                f"{result.chunks_available} chunks ({result.processed_tokens:,} of "
+                                f"{result.input_tokens:,} evidence tokens)."
+                            )
+                        metadata = st.columns(4)
+                        metadata[0].metric("Input tokens", f"{result.input_tokens:,}")
+                        metadata[1].metric("Processed chunks", f"{result.chunks_processed}/{result.chunks_available}")
+                        metadata[2].metric("Output tokens", f"{result.output_tokens:,}")
+                        metadata[3].metric("Inference time", f"{result.inference_seconds:.2f} s")
+                        st.caption(
+                            f"Source: {source_description} · Model: {result.model_id} · deterministic beam search"
+                        )
+                    except (EvidenceModelError, ValueError) as exc:
+                        st.error(f"Evidence generation could not continue: {exc}")
+                    except Exception as exc:
+                        st.error(f"Unexpected evidence-generation failure: {exc}")
+        else:
+            st.markdown(
+                '<div class="upload-guide">Confirm authorization, then paste evidence text or upload a UTF-8 TXT/digitally extractable PDF.</div>',
+                unsafe_allow_html=True,
+            )
+        st.markdown(
+            '<div class="guardrail"><b>Responsible use:</b> Research/educational use only. Verify generated observations against original evidence. Generated text may contain errors and must not be the sole legal or forensic basis.</div>',
+            unsafe_allow_html=True,
+        )
+
+    with theory_tab:
+        st.markdown("#### Transformer Attention Mechanics: Vision vs. Language")
+        st.markdown(
+            """
+            Both architectures share the foundational **Scaled Dot-Product Attention** mechanism formulated by Vaswani et al. (2017):
+            $$\\text{Attention}(Q, K, V) = \\text{softmax}\\left(\\frac{QK^T}{\\sqrt{d_k}}\\right)V$$
+            where Query ($Q$), Key ($K$), and Value ($V$) are linear projections of the input sequence tokens, scaled by the square root of the head dimension $d_k$ to preserve gradient stability.
+            """
+        )
+        t_comp_cols = st.columns(2, gap="large")
+        with t_comp_cols[0]:
+            st.info(
+                "**👁️ Vision Transformer (ViT V2)**\n\n"
+                "* **Sequence Element:** 2D spatial patches ($16 \\times 16$ pixels, $N=64$ tokens).\n"
+                "* **Position Representation:** 1D learnable spatial positional embeddings added to patch tokens.\n"
+                "* **Attention Field:** Global bidirectional self-attention across all image patches simultaneously.\n"
+                "* **Objective:** Mean squared error pixel reconstruction: $\\mathcal{L} = \\frac{1}{C \\times H \\times W} \\|x - \\hat{x}\\|^2$.\n"
+                "* **Forensic Utility:** Explores spatial structural anomalies and patches with elevated reconstruction deviations."
+            )
+        with t_comp_cols[1]:
+            st.success(
+                "**📄 Evidence Intelligence Transformer (FLAN-T5)**\n\n"
+                "* **Sequence Element:** SentencePiece subword BPE tokens (vocabulary size 32,100).\n"
+                "* **Position Representation:** Relative positional bias buckets between token positions.\n"
+                "* **Attention Field:** Bidirectional self-attention in Encoder + Causal masked self-attention and Cross-attention in Decoder.\n"
+                "* **Objective:** Pretrained sequence-to-sequence cross-entropy loss $\\mathcal{L} = -\\sum \\log P(y_t | y_{<t}, x)$.\n"
+                "* **Forensic Utility:** Synthesizes timeline facts, entities, and investigative leads from raw forensic text and digital PDFs."
+            )
+
+        st.markdown("##### Multimodal Architecture Comparison")
+        theory_df = pd.DataFrame([
+            {"Feature": "Modality", "Vision Transformer (ViT V2)": "Visual RGB (Image patches)", "Evidence Transformer (FLAN-T5)": "Natural Language (Text & PDF)"},
+            {"Feature": "Input Shape", "Vision Transformer (ViT V2)": "3 × 128 × 128 RGB tensor", "Evidence Transformer (FLAN-T5)": "Sequence of subword token IDs (up to 512 tokens/chunk)"},
+            {"Feature": "Token Count", "Vision Transformer (ViT V2)": "64 patch tokens (8 × 8 grid)", "Evidence Transformer (FLAN-T5)": "Dynamic token-aware chunks (up to 2,048 tokens total)"},
+            {"Feature": "Embedding Dimension", "Vision Transformer (ViT V2)": "256", "Evidence Transformer (FLAN-T5)": "512 (d_model)"},
+            {"Feature": "Attention Heads", "Vision Transformer (ViT V2)": "8 heads", "Evidence Transformer (FLAN-T5)": "8 heads"},
+            {"Feature": "Layers", "Vision Transformer (ViT V2)": "4 Encoder layers + 2 Decoder layers", "Evidence Transformer (FLAN-T5)": "6 Encoder blocks + 6 Decoder blocks"},
+            {"Feature": "Total Parameters", "Vision Transformer (ViT V2)": "2,139,139 (Trained by team on CASIA)", "Evidence Transformer (FLAN-T5)": "76,961,152 (Pretrained google/flan-t5-small)"},
+            {"Feature": "Inference Output", "Vision Transformer (ViT V2)": "Reconstructed RGB image + 8×8 attention heatmap", "Evidence Transformer (FLAN-T5)": "Structured intelligence narrative + entity extraction"},
+        ])
+        st.dataframe(theory_df, hide_index=True, width="stretch")
 
 
-elif page == "Synthetic Evidence Generation (Diffusion)":
+elif "Diffusion" in page:
     heading(
         "Generative module · scenario simulation",
         "Synthetic Evidence Generation (Diffusion)",
@@ -1361,7 +1451,7 @@ elif page == "Synthetic Evidence Generation (Diffusion)":
             st.caption("No live generation events recorded in this session yet. Events will appear here automatically.")
 
 
-elif page == "Model Evaluation":
+elif "Model Evaluation" in page:
     heading("Evidence-based comparison", "Model roles and measured outcomes", "Each architecture has a distinct objective. Reconstruction metrics compare output with input, while generative metrics evaluate distribution fidelity. They do not establish a single overall ranking or forensic validity.")
     
     st.markdown("### 1. Reconstruction & Representation Models (Canonical Held-Out Split)")
@@ -1403,16 +1493,15 @@ elif page == "Model Evaluation":
     st.dataframe(gen_comp_df, hide_index=True, width="stretch")
     st.caption("Generative metrics evaluate distribution fidelity and diversity; they are mathematically distinct from reconstruction fidelity.")
 
-    st.markdown("### Functional Roles Across the 6 Model Families")
+    st.markdown("### Functional Roles Across the 5 Core Model Families")
     roles1 = st.columns(3, gap="medium")
-    roles1[0].success("**01 · AE**\n\nDeterministic compression and high-fidelity baseline reconstruction.")
-    roles1[1].info("**02 · VAE V5**\n\nProbabilistic latent representation and image-conditioned stochastic sampling.")
-    roles1[2].primary("**03 · DCGAN**\n\nAdversarial synthetic patch generation from random latent noise vectors.")
+    roles1[0].success("**01 · Autoencoder (AE)**\n\nDeterministic compression and high-fidelity baseline reconstruction.")
+    roles1[1].info("**02 · Variational AE (VAE)**\n\nProbabilistic latent representation and image-conditioned stochastic sampling.")
+    roles1[2].primary("**03 · DCGAN Generator**\n\nAdversarial synthetic patch generation from random latent noise vectors.")
 
-    roles2 = st.columns(3, gap="medium")
-    roles2[0].warning("**04 · ViT V2**\n\nSelf-attention patch modeling with interpretable learned spatial relationships.")
-    roles2[1].info("**05 · FLAN-T5**\n\nToken-aware pretrained language model assisting with text and PDF intelligence.")
-    roles2[2].success("**06 · Diffusion**\n\nControlled forensic incident scenario generation and benchmark stress simulation.")
+    roles2 = st.columns(2, gap="medium")
+    roles2[0].warning("**04 · Transformer Suite (ViT + SLM)**\n\nDual-modality: ViT patch self-attention reconstruction + FLAN-T5 text/PDF document intelligence.")
+    roles2[1].success("**05 · Latent Diffusion (SD 1.5)**\n\nControlled forensic incident scenario generation and benchmark stress simulation.")
 
     st.markdown('<div class="guardrail"><b>Responsible conclusion:</b> none of these models is validated as a standalone tampering detector. Never use them as the sole basis for a forensic or legal decision.</div>', unsafe_allow_html=True)
     with st.expander("Why these metrics are not interchangeable"):
@@ -1422,7 +1511,7 @@ elif page == "Model Evaluation":
         st.write("Different evaluation objectives must never be presented as directly equivalent.")
 
 
-elif page == "Privacy & Ethical AI":
+elif "Privacy" in page:
     heading(
         "Deployment safeguards",
         "Privacy-oriented and responsible-use controls",
@@ -1482,14 +1571,14 @@ else:
         "A reproducible academic prototype built for Semester 7 Generative AI review and live faculty demonstration.",
     )
     details = st.columns(3)
-    details[0].metric("Integrated model families", "6")
+    details[0].metric("Integrated model families", "5")
     details[1].metric("Canonical test images", "1,892")
     details[2].metric("Demo samples", "24")
     st.markdown("### Implemented scope")
     st.write(
-        "Six operational model families: (1) Quality Autoencoder V1, (2) VAE V5 Final, (3) DCGAN "
-        "Synthetic Generator, (4) trained Vision Transformer V2, (5) pretrained FLAN-T5 Evidence "
-        "Intelligence, and (6) pretrained Stable Diffusion 1.5 Synthetic Scenario Generator."
+        "Five operational model architectures: (1) Quality Autoencoder V1, (2) VAE V5 Final, (3) DCGAN "
+        "Synthetic Patch Generator, (4) Multimodal Transformer Suite (ViT V2 + FLAN-T5 Small), and "
+        "(5) pretrained Stable Diffusion 1.5 Synthetic Scenario Generator."
     )
     st.markdown("### Current boundaries")
     st.write(
