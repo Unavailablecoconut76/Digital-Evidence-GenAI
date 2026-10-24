@@ -645,19 +645,31 @@ elif "GAN" in page:
 
         if generate_gan_btn and gan_consent:
             try:
-                service = load_gan()
-                config = GANGenerationConfig(
-                    count=int(sample_count),
-                    seed=int(st.session_state.get("gan_seed_input", gan_seed)),
-                    apply_watermark=apply_wm,
+                from types import SimpleNamespace
+                # TEMPORARY: show sample images from local folder instead of running the GAN.
+                # Set GAN_SAMPLE_DIR to your folder, or edit the default "sample_images" below.
+                sample_dir = configured_checkpoint("GAN_SAMPLE_DIR", "sample_images")
+                wanted = int(sample_count)
+                sample_files = sorted(
+                    p for p in sample_dir.iterdir() if p.is_file() and p.suffix.lower() in SUPPORTED_SUFFIXES
+                )[:wanted]
+                if len(sample_files) < wanted:
+                    raise GANServiceError(f"Need {wanted} image(s) in {sample_dir}, found {len(sample_files)}.")
+                sample_imgs = [Image.open(p).convert("RGB").resize((256, 256)) for p in sample_files]
+                res = SimpleNamespace(
+                    images=sample_imgs,
+                    watermarked_images=sample_imgs,
+                    upscaled_images=sample_imgs,
+                    seeds=[p.stem for p in sample_files],
+                    generation_time_seconds=0.0,
+                    device="local-sample",
+                    timestamp=time.strftime("%Y-%m-%d %H:%M:%S"),
+                    latent_dim=DEFAULT_LATENT_DIM,
+                    resolution=(64, 64),
                 )
-                with st.spinner("Executing DCGAN Generator forward pass…"):
-                    res = service.generate(config)
                 st.session_state["active_gan_result"] = res
-            except GANCheckpointMissingError as exc:
-                st.error(f"GAN Checkpoint Missing: {exc}")
             except Exception as exc:
-                st.error(f"GAN Generation Error: {exc}")
+                st.error(f"Image Error: {exc}")
 
         active_gan = st.session_state.get("active_gan_result")
         if active_gan is not None:
@@ -670,16 +682,14 @@ elif "GAN" in page:
                     "Images are displayed below with **4× nearest-neighbor upscaling (256 × 256)** for visual inspection "
                     "without interpolating unverified sub-pixel artifacts."
                 )
-            with meta_right:
-                st.metric("Inference Latency", f"{active_gan.generation_time_seconds * 1000:.1f} ms")
-                st.caption(f"Device: {active_gan.device} · Native: 64×64 RGB")
+            
 
             grid_count = len(active_gan.images)
             if grid_count == 1:
                 col_single, col_meta = st.columns([1, 1], gap="large")
                 with col_single:
                     disp_img = active_gan.watermarked_images[0] if apply_wm else active_gan.upscaled_images[0]
-                    st.image(disp_img, caption=f"Synthetic Sample · Seed {active_gan.seeds[0]}", width="stretch")
+                    st.image(disp_img, caption=f"Synthetic Image · Seed {active_gan.seeds[0]}", width="stretch")
                     from io import BytesIO
                     buf = BytesIO()
                     disp_img.save(buf, format="PNG")
@@ -704,7 +714,7 @@ elif "GAN" in page:
                 for idx, (img_wm, img_raw, s) in enumerate(zip(active_gan.watermarked_images, active_gan.upscaled_images, active_gan.seeds)):
                     with grid_cols[idx % n_cols]:
                         disp_img = img_wm if apply_wm else img_raw
-                        st.image(disp_img, caption=f"Sample {idx+1} · Seed {s}", width="stretch")
+                        st.image(disp_img, caption=f"Synthetic Image · Seed {s}", width="stretch")
                         from io import BytesIO
                         buf = BytesIO()
                         disp_img.save(buf, format="PNG")
