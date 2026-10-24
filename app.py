@@ -20,84 +20,44 @@ ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT))
 
-try:
-    from src.ae_inference import AutoencoderInference
-    from src.document_parser import DocumentParseError, MAX_EVIDENCE_BYTES, parse_evidence_file
-    from src.evidence_transformer import DEFAULT_PROMPT, EvidenceModelError, EvidenceTransformer
-    from src.transformer_inference import TransformerInference
-    from src.vae_inference import VAEInference
-    from src.gan_service import (
-        DEFAULT_DISCRIMINATOR_CHECKPOINT,
-        DEFAULT_DISPLAY_UPSCALED_SIZE,
-        DEFAULT_GENERATOR_CHECKPOINT,
-        DEFAULT_IMAGE_SIZE,
-        DEFAULT_LATENT_DIM,
-        GAN_AUDIT_LOG_CSV,
-        SYNTHETIC_GAN_DISCLAIMER,
-        GANCheckpointMissingError,
-        GANGenerationConfig,
-        GANGenerationResult,
-        GANService,
-        GANServiceError,
-        apply_gan_watermark,
-        log_gan_generation_event,
-        slerp,
-    )
-    from src.diffusion_service import (
-        DEFAULT_GUIDANCE_SCALE,
-        DEFAULT_INFERENCE_STEPS,
-        DEFAULT_SEED,
-        DIFFUSION_MODEL_ID,
-        PRESET_SCENARIOS,
-        SYNTHETIC_DISCLAIMER_TEXT,
-        DiffusionGenerationConfig,
-        DiffusionGenerationResult,
-        DiffusionModelMissingError,
-        DiffusionService,
-        DiffusionServiceError,
-        apply_synthetic_watermark,
-        load_canonical_gallery,
-        log_generation_event,
-    )
-except ImportError:
-    from ae_inference import AutoencoderInference
-    from document_parser import DocumentParseError, MAX_EVIDENCE_BYTES, parse_evidence_file
-    from evidence_transformer import DEFAULT_PROMPT, EvidenceModelError, EvidenceTransformer
-    from transformer_inference import TransformerInference
-    from vae_inference import VAEInference
-    from gan_service import (
-        DEFAULT_DISCRIMINATOR_CHECKPOINT,
-        DEFAULT_DISPLAY_UPSCALED_SIZE,
-        DEFAULT_GENERATOR_CHECKPOINT,
-        DEFAULT_IMAGE_SIZE,
-        DEFAULT_LATENT_DIM,
-        GAN_AUDIT_LOG_CSV,
-        SYNTHETIC_GAN_DISCLAIMER,
-        GANCheckpointMissingError,
-        GANGenerationConfig,
-        GANGenerationResult,
-        GANService,
-        GANServiceError,
-        apply_gan_watermark,
-        log_gan_generation_event,
-        slerp,
-    )
-    from diffusion_service import (
-        DEFAULT_GUIDANCE_SCALE,
-        DEFAULT_INFERENCE_STEPS,
-        DEFAULT_SEED,
-        DIFFUSION_MODEL_ID,
-        PRESET_SCENARIOS,
-        SYNTHETIC_DISCLAIMER_TEXT,
-        DiffusionGenerationConfig,
-        DiffusionGenerationResult,
-        DiffusionModelMissingError,
-        DiffusionService,
-        DiffusionServiceError,
-        apply_synthetic_watermark,
-        load_canonical_gallery,
-        log_generation_event,
-    )
+from src.ae_inference import AutoencoderInference
+from src.document_parser import DocumentParseError, MAX_EVIDENCE_BYTES, parse_evidence_file
+from src.evidence_transformer import DEFAULT_PROMPT, EvidenceModelError, EvidenceTransformer
+from src.transformer_inference import TransformerInference
+from src.vae_inference import VAEInference
+from src.gan_service import (
+    DEFAULT_DISCRIMINATOR_CHECKPOINT,
+    DEFAULT_DISPLAY_UPSCALED_SIZE,
+    DEFAULT_GENERATOR_CHECKPOINT,
+    DEFAULT_IMAGE_SIZE,
+    DEFAULT_LATENT_DIM,
+    GAN_AUDIT_LOG_CSV,
+    SYNTHETIC_GAN_DISCLAIMER,
+    GANCheckpointMissingError,
+    GANGenerationConfig,
+    GANGenerationResult,
+    GANService,
+    GANServiceError,
+    apply_gan_watermark,
+    log_gan_generation_event,
+    slerp,
+)
+from src.diffusion_service import (
+    DEFAULT_GUIDANCE_SCALE,
+    DEFAULT_INFERENCE_STEPS,
+    DEFAULT_SEED,
+    DIFFUSION_MODEL_ID,
+    PRESET_SCENARIOS,
+    SYNTHETIC_DISCLAIMER_TEXT,
+    DiffusionGenerationConfig,
+    DiffusionGenerationResult,
+    DiffusionModelMissingError,
+    DiffusionService,
+    DiffusionServiceError,
+    apply_synthetic_watermark,
+    load_canonical_gallery,
+    log_generation_event,
+)
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 SUPPORTED_SUFFIXES = {".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff"}
