@@ -5,6 +5,7 @@ from __future__ import annotations
 import sys
 import json
 import os
+import time
 from pathlib import Path
 
 import matplotlib.pyplot as plt
