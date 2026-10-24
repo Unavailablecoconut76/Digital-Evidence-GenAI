@@ -1,14 +1,15 @@
 # Multi-Model Generative AI Framework for Digital Evidence Analysis and Intelligence Generation
 
-Semester 7 Generative AI project prepared for Review 2. The repository combines three trained image architectures with a separate pretrained text Transformer integration:
+Semester 7 Generative AI project prepared for Review 2. The repository combines four trained image architectures with a separate pretrained text Transformer integration and a pretrained Diffusion scenario simulation:
 
 1. Convolutional Autoencoder — deterministic reconstruction and compression.
 2. Variational Autoencoder V5 — probabilistic latent representation, deterministic reconstruction, and image-conditioned stochastic reconstructions.
-3. Vision Transformer V2 — patch-token self-attention reconstruction and exploratory attention visualization.
-4. Evidence Intelligence Transformer — no-key pretrained FLAN-T5 integration for pasted text and digitally extractable PDFs.
-5. Synthetic Evidence Generation (Diffusion) — pretrained Stable Diffusion 1.5 integration for controlled forensic incident scenario simulation.
+3. DCGAN Generator — trained 64×64 CASIA synthetic image patch synthesis and latent-space manifold interpolation.
+4. Vision Transformer V2 — patch-token self-attention reconstruction and exploratory attention visualization.
+5. Evidence Intelligence Transformer — no-key pretrained FLAN-T5 integration for pasted text and digitally extractable PDFs.
+6. Synthetic Evidence Generation (Diffusion) — pretrained Stable Diffusion 1.5 integration for controlled forensic incident scenario simulation.
 
-The trained GAN implementation and checkpoints remain preserved for the later course phase but are intentionally absent from the current GUI.
+All six model families are fully integrated and demonstrable through the professional Streamlit GUI.
 
 ## Responsible-use boundary
 
@@ -103,6 +104,36 @@ Prior-only generation is retained as a separate limitation demonstration; it can
 
 ![VAE image-conditioned stochastic reconstructions](docs/results/vae_stochastic_variations.png)
 
+### DCGAN Generator (Synthetic Image Synthesis)
+
+- Architecture: Deep Convolutional GAN (Radford et al. 2015)
+- Latent noise dimension: 100 ($z \sim \mathcal{N}(0, \mathbf{I})$)
+- Native output resolution: $64 \times 64$ RGB
+- Generator parameters: 3,576,704 (5 transposed convolutional layers with BatchNorm2d, ReLU, and Tanh)
+- Discriminator parameters: 2,765,568 (5 convolutional layers with LeakyReLU 0.2 and scalar logit output)
+- Active checkpoints: `checkpoints/best_generator.pth` (14.3 MB) and `checkpoints/best_discriminator.pth` (11.1 MB)
+- Training: 30 epochs on CASIA (NVIDIA Tesla T4, 677.68 seconds)
+- Adversarial loss: Binary cross-entropy with logits (`BCEWithLogitsLoss`)
+- Final training loss: Generator 3.3741 · Discriminator 0.2748
+- Verified test evaluation (1,892 real vs. 1,892 synthetic CASIA images):
+  - Fréchet Inception Distance (FID): 169.88
+  - Inception Score (IS): 2.95 ± 0.13
+- Core capabilities:
+  - Multi-sample synthetic generation (1, 4, 9, or 16 images) with seed reproducibility;
+  - Spherical linear interpolation (SLERP) across the continuous 100-D latent manifold;
+  - Disclosed native resolution ($64 \times 64$) with 4× nearest-neighbor upscaling ($256 \times 256$) for pixel-accurate inspection;
+  - Embedded educational provenance watermark banner and audit logging (`outputs/gan/gan_generation_log.csv`);
+  - Historical training evolution display across epochs 5, 10, 15, 20, 25, and 30.
+- Boundary: Synthetic image generation only. Does not classify real vs. tampered images, does not detect forgery, and does not produce authentic digital evidence.
+
+Authoritative artifacts:
+- `results/gan_training_summary.json`
+- `results/gan_training_history.csv`
+- `results/gan_architecture_summary.json`
+- `results/gan_test_metrics.json`
+- `outputs/gan/gan_loss_curve.png`
+- `outputs/gan/final_generated_samples.png`
+
 ### Vision Transformer V2
 
 - Input: `3 × 128 × 128`
@@ -167,17 +198,18 @@ The default model is deliberately small for CPU/Streamlit portability, so output
 
 ## Streamlit application
 
-The professional GUI has nine pages:
+The professional GUI has ten pages:
 
 1. Project Overview
 2. Autoencoder
 3. Variational Autoencoder
-4. Vision Transformer
-5. Evidence Intelligence Transformer
-6. Synthetic Evidence Generation (Diffusion)
-7. Model Evaluation
-8. Privacy & Ethical AI
-9. Project Information
+4. GAN — Synthetic Image Generation
+5. Vision Transformer
+6. Evidence Intelligence Transformer
+7. Synthetic Evidence Generation (Diffusion)
+8. Model Evaluation
+9. Privacy & Ethical AI
+10. Project Information
 
 The three image pages support normal uploads and a browsable, reproducible 24-image canonical test gallery (12 authentic and 12 tampered) when local CASIA data is available. If raw data is absent, the app explains why the gallery is unavailable and retains manual upload. Model loading is cached, CPU fallback is automatic, and missing files/LFS pointers produce actionable errors.
 

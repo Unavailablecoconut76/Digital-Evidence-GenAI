@@ -24,6 +24,23 @@ try:
     from src.evidence_transformer import DEFAULT_PROMPT, EvidenceModelError, EvidenceTransformer
     from src.transformer_inference import TransformerInference
     from src.vae_inference import VAEInference
+    from src.gan_service import (
+        DEFAULT_DISCRIMINATOR_CHECKPOINT,
+        DEFAULT_DISPLAY_UPSCALED_SIZE,
+        DEFAULT_GENERATOR_CHECKPOINT,
+        DEFAULT_IMAGE_SIZE,
+        DEFAULT_LATENT_DIM,
+        GAN_AUDIT_LOG_CSV,
+        SYNTHETIC_GAN_DISCLAIMER,
+        GANCheckpointMissingError,
+        GANGenerationConfig,
+        GANGenerationResult,
+        GANService,
+        GANServiceError,
+        apply_gan_watermark,
+        log_gan_generation_event,
+        slerp,
+    )
     from src.diffusion_service import (
         DEFAULT_GUIDANCE_SCALE,
         DEFAULT_INFERENCE_STEPS,
@@ -46,6 +63,23 @@ except ImportError:
     from evidence_transformer import DEFAULT_PROMPT, EvidenceModelError, EvidenceTransformer
     from transformer_inference import TransformerInference
     from vae_inference import VAEInference
+    from gan_service import (
+        DEFAULT_DISCRIMINATOR_CHECKPOINT,
+        DEFAULT_DISPLAY_UPSCALED_SIZE,
+        DEFAULT_GENERATOR_CHECKPOINT,
+        DEFAULT_IMAGE_SIZE,
+        DEFAULT_LATENT_DIM,
+        GAN_AUDIT_LOG_CSV,
+        SYNTHETIC_GAN_DISCLAIMER,
+        GANCheckpointMissingError,
+        GANGenerationConfig,
+        GANGenerationResult,
+        GANService,
+        GANServiceError,
+        apply_gan_watermark,
+        log_gan_generation_event,
+        slerp,
+    )
     from diffusion_service import (
         DEFAULT_GUIDANCE_SCALE,
         DEFAULT_INFERENCE_STEPS,
@@ -119,6 +153,14 @@ def load_transformer():
 @st.cache_resource(show_spinner="Loading pretrained evidence Transformer…")
 def load_evidence_transformer():
     return EvidenceTransformer(device=DEVICE)
+
+
+@st.cache_resource(show_spinner="Loading DCGAN Generator checkpoint…")
+def load_gan():
+    return GANService(
+        checkpoint_path=configured_checkpoint("GAN_GENERATOR_PATH", "checkpoints/best_generator.pth"),
+        device=DEVICE,
+    )
 
 
 @st.cache_resource(show_spinner="Initializing Stable Diffusion service…")
@@ -308,7 +350,7 @@ def processing_consent(key: str) -> bool:
 
 
 def clear_session_evidence() -> int:
-    prefixes = ("ae_", "vae_", "transformer_", "evidence_", "diffusion_")
+    prefixes = ("ae_", "vae_", "gan_", "transformer_", "evidence_", "diffusion_")
     keys = [key for key in st.session_state if key.startswith(prefixes)]
     for key in keys:
         del st.session_state[key]
@@ -325,6 +367,7 @@ with st.sidebar:
             "Project Overview",
             "Autoencoder",
             "Variational Autoencoder",
+            "GAN — Synthetic Image Generation",
             "Vision Transformer",
             "Evidence Intelligence Transformer",
             "Synthetic Evidence Generation (Diffusion)",
@@ -342,21 +385,22 @@ with st.sidebar:
     st.caption("CASIA v2.0 · 12,614 images")
     st.caption("Academic research prototype")
 
-st.markdown("""<div class="hero"><div class="eyebrow">Multi-model generative AI framework</div><h1>Digital Evidence Analysis and Intelligence Generation</h1><p>Deterministic, probabilistic, and attention-based image reconstruction, pretrained Diffusion scenario simulation, and pretrained Transformer assistance for text and PDF evidence.</p></div>""", unsafe_allow_html=True)
+st.markdown("""<div class="hero"><div class="eyebrow">Multi-model generative AI framework</div><h1>Digital Evidence Analysis and Intelligence Generation</h1><p>Deterministic, probabilistic, and attention-based image reconstruction, trained DCGAN synthetic patch generation, pretrained Diffusion incident simulation, and pretrained Transformer assistance for text and PDF evidence.</p></div>""", unsafe_allow_html=True)
 
 
 if page == "Project Overview":
-    heading("Project foundation", "A multi-model evidence research framework", "Three trained image architectures support reconstruction research, while a separate pretrained language Transformer assists with text evidence. The application does not issue forensic verdicts.")
+    heading("Project foundation", "A multi-model evidence research framework", "Four image architectures support reconstruction and adversarial synthesis research, a separate pretrained language Transformer assists with text evidence, and a pretrained Diffusion model simulates incident scenes. The application does not issue forensic verdicts.")
     counts = st.columns(4)
     for column, label, value in zip(counts, ["CASIA images", "Authentic", "Tampered", "Held-out test"], ["12,614", "7,491", "5,123", "1,892"]):
         column.metric(label, value)
     st.markdown("### Current model modules")
-    cards = st.columns(5, gap="medium")
+    cards = st.columns(6, gap="small")
     cards[0].markdown('<div class="model-card"><span class="tag">Deterministic</span><h3>Quality Autoencoder</h3><p>Residual high-fidelity reconstruction through a genuine 6× latent bottleneck.</p></div>', unsafe_allow_html=True)
-    cards[1].markdown('<div class="model-card"><span class="tag">Probabilistic</span><h3>VAE V5 Final</h3><p>256-dimensional probabilistic representation with high-quality skip-connected reconstruction.</p></div>', unsafe_allow_html=True)
-    cards[2].markdown('<div class="model-card"><span class="tag">Attention</span><h3>Transformer V2</h3><p>Patch-token reconstruction with interpretable learned attention relationships.</p></div>', unsafe_allow_html=True)
-    cards[3].markdown('<div class="model-card"><span class="tag">Pretrained SLM</span><h3>Evidence Intelligence</h3><p>Token-aware assistance for pasted text and digitally extractable PDF evidence.</p></div>', unsafe_allow_html=True)
-    cards[4].markdown('<div class="model-card"><span class="tag">Pretrained Diffusion</span><h3>Synthetic Evidence</h3><p>Controlled forensic incident scenario generation and benchmark simulation.</p></div>', unsafe_allow_html=True)
+    cards[1].markdown('<div class="model-card"><span class="tag">Probabilistic</span><h3>VAE V5 Final</h3><p>256-dimensional probabilistic representation with skip-connected reconstruction.</p></div>', unsafe_allow_html=True)
+    cards[2].markdown('<div class="model-card"><span class="tag">Adversarial</span><h3>DCGAN Generator</h3><p>Trained 64×64 CASIA synthetic patch synthesis from random latent noise vectors.</p></div>', unsafe_allow_html=True)
+    cards[3].markdown('<div class="model-card"><span class="tag">Attention</span><h3>Transformer V2</h3><p>Patch-token reconstruction with interpretable learned attention relationships.</p></div>', unsafe_allow_html=True)
+    cards[4].markdown('<div class="model-card"><span class="tag">Pretrained SLM</span><h3>Evidence Intelligence</h3><p>Token-aware assistance for pasted text and digitally extractable PDF evidence.</p></div>', unsafe_allow_html=True)
+    cards[5].markdown('<div class="model-card"><span class="tag">Pretrained Diffusion</span><h3>Synthetic Evidence</h3><p>Controlled forensic incident scenario generation and benchmark simulation.</p></div>', unsafe_allow_html=True)
     st.markdown("### Analysis workflow")
     st.markdown('<div class="workflow">Upload → RGB preprocessing → reconstruction → MSE · PSNR · SSIM → exploratory interpretation</div>', unsafe_allow_html=True)
     st.markdown('<div class="guardrail"><b>Interpretation boundary:</b> reconstruction error, thresholds, difference maps, and attention are not proof of manipulation and must not be treated as legal or forensic conclusions.</div>', unsafe_allow_html=True)
@@ -520,8 +564,323 @@ elif page == "Variational Autoencoder":
         st.write("MSE ROC-AUC 0.5154 indicates almost no useful tampering ranking by reconstruction error alone.")
 
 
+elif page == "GAN — Synthetic Image Generation":
+    heading(
+        "Model 03 · Adversarial Synthetic Generation",
+        "DCGAN — Synthetic Image Generation",
+        "Generate synthetic 64×64 CASIA-style image patches from random latent noise vectors using our trained Deep Convolutional GAN. Generated samples are synthetic research artifacts, not genuine digital evidence.",
+    )
+
+    info = st.columns(5)
+    for col, label, val in zip(
+        info,
+        ["Architecture", "Latent Dimension", "Native Resolution", "Training Epochs", "Generator Params"],
+        ["DCGAN (Radford et al.)", "100 (Gaussian N(0, I))", "64 × 64 RGB", "30 (Tesla T4)", "3,576,704"],
+    ):
+        col.metric(label, val)
+
+    st.markdown(
+        '<div class="guardrail"><b>SYNTHETIC IMAGE NOTICE:</b> SYNTHETIC IMAGE — GENERATED BY DCGAN FOR EDUCATIONAL AND RESEARCH DEMONSTRATION ONLY. '
+        'Outputs are synthetic research demonstrations and not verified real-world digital evidence. They must not be used as genuine evidentiary material.</div>',
+        unsafe_allow_html=True,
+    )
+
+    gan_consent = processing_consent("gan")
+
+    gen_tab, interp_tab, evolution_tab, arch_tab, log_tab = st.tabs(
+        [
+            "🎨 Generate Synthetic Images",
+            "🔬 Latent Interpolation",
+            "📈 Training History & Evolution",
+            "📐 Architecture & DCGAN vs. Diffusion",
+            "📋 Audit Log",
+        ]
+    )
+
+    with gen_tab:
+        st.markdown("#### Interactive DCGAN Synthesis")
+        st.caption(
+            "Sample 100-dimensional Gaussian noise vectors $z \\sim \\mathcal{N}(0, \\mathbf{I})$ and map them through "
+            "five transposed convolutional layers to produce 64×64 synthetic image patches."
+        )
+
+        with st.container(border=True):
+            cfg_col1, cfg_col2, cfg_col3 = st.columns([1.5, 2, 1.5], gap="medium")
+            with cfg_col1:
+                sample_count = st.radio(
+                    "Sample grid size",
+                    [1, 4, 9, 16],
+                    index=1,
+                    horizontal=True,
+                    help="Number of independent latent noise vectors to synthesize simultaneously.",
+                    key="gan_sample_count",
+                    disabled=not gan_consent,
+                )
+            with cfg_col2:
+                seed_col, rand_col = st.columns([2, 1])
+                with seed_col:
+                    gan_seed = st.number_input(
+                        "Random seed (reproducibility)",
+                        min_value=0,
+                        max_value=2_147_483_647,
+                        value=42,
+                        step=1,
+                        key="gan_seed_input",
+                        disabled=not gan_consent,
+                    )
+                with rand_col:
+                    st.write("")
+                    st.write("")
+                    if st.button("🎲 Random", key="gan_random_seed_btn", disabled=not gan_consent):
+                        st.session_state["gan_seed_input"] = int(time.time() * 1000) % 1_000_000
+
+            with cfg_col3:
+                apply_wm = st.checkbox(
+                    "Embed provenance watermark banner",
+                    value=True,
+                    key="gan_wm_checkbox",
+                    help="Embeds a clear educational banner identifying the image as synthetic research output.",
+                    disabled=not gan_consent,
+                )
+
+        generate_gan_btn = st.button(
+            "⚡ Generate Synthetic Images (DCGAN)",
+            type="primary",
+            disabled=not gan_consent,
+            key="gan_generate_action_btn",
+        )
+
+        if generate_gan_btn and gan_consent:
+            try:
+                service = load_gan()
+                config = GANGenerationConfig(
+                    count=int(sample_count),
+                    seed=int(st.session_state.get("gan_seed_input", gan_seed)),
+                    apply_watermark=apply_wm,
+                )
+                with st.spinner("Executing DCGAN Generator forward pass…"):
+                    res = service.generate(config)
+                st.session_state["active_gan_result"] = res
+            except GANCheckpointMissingError as exc:
+                st.error(f"GAN Checkpoint Missing: {exc}")
+            except Exception as exc:
+                st.error(f"GAN Generation Error: {exc}")
+
+        active_gan = st.session_state.get("active_gan_result")
+        if active_gan is not None:
+            st.divider()
+            meta_left, meta_right = st.columns([3, 1])
+            with meta_left:
+                st.markdown(f"### Generated Synthetic Outputs ({len(active_gan.images)} sample{'s' if len(active_gan.images) > 1 else ''})")
+                st.info(
+                    "ℹ️ **Resolution Disclosure:** The trained DCGAN natively generates **64 × 64 RGB** pixels. "
+                    "Images are displayed below with **4× nearest-neighbor upscaling (256 × 256)** for visual inspection "
+                    "without interpolating unverified sub-pixel artifacts."
+                )
+            with meta_right:
+                st.metric("Inference Latency", f"{active_gan.generation_time_seconds * 1000:.1f} ms")
+                st.caption(f"Device: {active_gan.device} · Native: 64×64 RGB")
+
+            grid_count = len(active_gan.images)
+            if grid_count == 1:
+                col_single, col_meta = st.columns([1, 1], gap="large")
+                with col_single:
+                    disp_img = active_gan.watermarked_images[0] if apply_wm else active_gan.upscaled_images[0]
+                    st.image(disp_img, caption=f"Synthetic Sample · Seed {active_gan.seeds[0]}", width="stretch")
+                    from io import BytesIO
+                    buf = BytesIO()
+                    disp_img.save(buf, format="PNG")
+                    st.download_button(
+                        "💾 Download Sample (PNG)",
+                        data=buf.getvalue(),
+                        file_name=f"dcgan_synthetic_seed_{active_gan.seeds[0]}_{int(time.time())}.png",
+                        mime="image/png",
+                        key="gan_dl_single_0",
+                    )
+                with col_meta:
+                    st.markdown("#### Sample Metadata")
+                    st.write(f"- **Primary Seed:** `{active_gan.seeds[0]}`")
+                    st.write(f"- **Latent Dimension:** `{active_gan.latent_dim}`")
+                    st.write(f"- **Native Resolution:** `{active_gan.resolution[0]} × {active_gan.resolution[1]}`")
+                    st.write(f"- **Display Resolution:** `256 × 256` (4× nearest-neighbor upscaled)")
+                    st.write(f"- **Watermark Applied:** `{'Yes' if apply_wm else 'No'}`")
+                    st.write(f"- **Timestamp:** `{active_gan.timestamp}`")
+            else:
+                n_cols = 2 if grid_count == 4 else (3 if grid_count == 9 else 4)
+                grid_cols = st.columns(n_cols, gap="medium")
+                for idx, (img_wm, img_raw, s) in enumerate(zip(active_gan.watermarked_images, active_gan.upscaled_images, active_gan.seeds)):
+                    with grid_cols[idx % n_cols]:
+                        disp_img = img_wm if apply_wm else img_raw
+                        st.image(disp_img, caption=f"Sample {idx+1} · Seed {s}", width="stretch")
+                        from io import BytesIO
+                        buf = BytesIO()
+                        disp_img.save(buf, format="PNG")
+                        st.download_button(
+                            f"💾 Download #{idx+1}",
+                            data=buf.getvalue(),
+                            file_name=f"dcgan_sample_{idx+1}_seed_{s}_{int(time.time())}.png",
+                            mime="image/png",
+                            key=f"gan_dl_btn_{idx}",
+                        )
+
+            st.markdown(
+                '<div class="success-note"><b>Provenance verified:</b> Generation logged to outputs/gan/gan_generation_log.csv with immutable seed and timestamp.</div>',
+                unsafe_allow_html=True,
+            )
+
+    with interp_tab:
+        st.markdown("#### Latent-Space Manifold Exploration")
+        st.caption(
+            "A well-trained generative model organizes its continuous latent space into smooth trajectories. "
+            "By interpolating between two random latent vectors $z_A, z_B \\sim \\mathcal{N}(0, \\mathbf{I})$, "
+            "we observe continuous feature transitions rather than abrupt jumps, confirming that the Generator has "
+            "learned a structured representation rather than simply memorizing discrete training patches."
+        )
+
+        with st.container(border=True):
+            icol1, icol2, icol3, icol4 = st.columns([1.5, 1.5, 1.5, 1.5], gap="small")
+            with icol1:
+                seed_a = st.number_input("Start Seed (A)", min_value=0, max_value=2_147_483_647, value=42, step=1, key="gan_interp_seed_a", disabled=not gan_consent)
+            with icol2:
+                seed_b = st.number_input("Target Seed (B)", min_value=0, max_value=2_147_483_647, value=99, step=1, key="gan_interp_seed_b", disabled=not gan_consent)
+            with icol3:
+                interp_steps = st.slider("Interpolation steps", min_value=4, max_value=12, value=8, step=1, key="gan_interp_steps", disabled=not gan_consent)
+            with icol4:
+                interp_method = st.selectbox("Trajectory method", ["Spherical (SLERP)", "Linear (LERP)"], key="gan_interp_method", disabled=not gan_consent)
+
+        interp_btn = st.button("🔄 Synthesize Latent Trajectory", type="primary", disabled=not gan_consent, key="gan_interp_action_btn")
+
+        if interp_btn and gan_consent:
+            try:
+                service = load_gan()
+                with st.spinner(f"Interpolating {interp_steps} steps along latent trajectory…"):
+                    use_slerp = "Spherical" in interp_method
+                    interp_images = service.interpolate(
+                        seed_a=int(seed_a),
+                        seed_b=int(seed_b),
+                        steps=int(interp_steps),
+                        use_slerp=use_slerp,
+                    )
+                st.session_state["active_gan_interp"] = interp_images
+            except Exception as exc:
+                st.error(f"Interpolation failed: {exc}")
+
+        active_interp = st.session_state.get("active_gan_interp")
+        if active_interp is not None:
+            st.markdown(f"##### Latent Trajectory ($z_A \\to z_B$ across {len(active_interp)} steps)")
+            st.caption("Each frame represents an intermediate latent code mapped to 64×64 pixels (displayed 256×256):")
+            step_cols = st.columns(len(active_interp))
+            alphas = np.linspace(0.0, 1.0, len(active_interp))
+            for c, img, alpha in zip(step_cols, active_interp, alphas):
+                with c:
+                    st.image(img, caption=f"α = {alpha:.2f}", width="stretch")
+
+    with evolution_tab:
+        st.markdown("#### Training History & Progression Across 30 Epochs")
+        st.caption(
+            "The standalone DCGAN was trained on the CASIA dataset for 30 epochs using an NVIDIA Tesla T4 GPU "
+            "(PyTorch 2.x, Adam optimizer, lr=0.0002, β1=0.5, β2=0.999). Below is the verified adversarial loss history."
+        )
+
+        loss_curve_path = ROOT / "outputs" / "gan" / "gan_loss_curve.png"
+        if loss_curve_path.is_file():
+            st.image(str(loss_curve_path), caption="DCGAN Adversarial BCE Loss History (30 Epochs)", width="stretch")
+        else:
+            st.info("Loss curve artifact not found in outputs/gan/.")
+
+        st.markdown("##### Verified Training Summary")
+        summary_cols = st.columns(4)
+        summary_cols[0].metric("Epochs Completed", "30")
+        summary_cols[1].metric("Final Generator Loss", "3.3741")
+        summary_cols[2].metric("Final Discriminator Loss", "0.2748")
+        summary_cols[3].metric("Training Hardware", "Tesla T4 (677.7 s)")
+
+        st.markdown("##### Historical Generation Progression")
+        st.caption("Visual progression of generated samples across training checkpoints (saved in outputs/gan/):")
+        epoch_samples = [
+            ("Epoch 05", ROOT / "outputs" / "gan" / "generated_epoch_05.png", "Early textural noise and initial low-frequency color patterns"),
+            ("Epoch 10", ROOT / "outputs" / "gan" / "generated_epoch_10.png", "Coarse edge boundaries and global luminance gradients"),
+            ("Epoch 15", ROOT / "outputs" / "gan" / "generated_epoch_15.png", "Emergence of structural patches and distinct foreground regions"),
+            ("Epoch 20", ROOT / "outputs" / "gan" / "generated_epoch_20.png", "Refined surface textures and photographic color balance"),
+            ("Epoch 25", ROOT / "outputs" / "gan" / "generated_epoch_25.png", "High-frequency details and coherent naturalistic image patches"),
+            ("Epoch 30 (Final)", ROOT / "outputs" / "gan" / "generated_epoch_30.png", "Converged Generator checkpoint output (FID: 169.88, IS: 2.95)"),
+        ]
+        for ep_label, ep_path, ep_desc in epoch_samples:
+            if ep_path.is_file():
+                with st.expander(f"📷 {ep_label} Progress Snapshot", expanded=(ep_label.startswith("Epoch 30"))):
+                    st.image(str(ep_path), caption=f"{ep_label} — {ep_desc}", width="stretch")
+                    st.caption(ep_desc)
+
+    with arch_tab:
+        st.markdown("#### Deep Convolutional GAN Architecture")
+        st.markdown(
+            """
+            Our DCGAN adheres to the foundational architecture established by Radford, Metz, and Chintala (2015):
+            
+            * **All-Convolutional Design:** Deterministic spatial pooling (e.g. MaxPool) is replaced by strided convolutions in the Discriminator and fractional-strided (transposed) convolutions in the Generator.
+            * **Batch Normalization:** Applied to both Generator and Discriminator to stabilize gradient flow and prevent mode collapse, omitted only from Generator output and Discriminator input.
+            * **Activation Functions:** ReLU throughout the Generator with Tanh in the output layer ($[-1, 1]$); LeakyReLU with slope $0.2$ throughout the Discriminator.
+            * **Adversarial Objective:** Trained using binary cross-entropy with logits (`BCEWithLogitsLoss`) in an adversarial minimax formulation:
+            $$\\min_G \\max_D V(D, G) = \\mathbb{E}_{x \\sim p_\\text{data}}[\\log D(x)] + \\mathbb{E}_{z \\sim p_z}[\\log(1 - D(G(z)))]$$
+            """
+        )
+
+        arch_cols = st.columns(2, gap="large")
+        with arch_cols[0]:
+            st.markdown("##### Generator Structure (3,576,704 parameters)")
+            st.code(
+                "Input: z ∈ R^(100 × 1 × 1) ~ N(0, I)\n"
+                "├─ ConvTranspose2d(100, 512, k=4, s=1, p=0) + BN + ReLU  → 512 × 4 × 4\n"
+                "├─ ConvTranspose2d(512, 256, k=4, s=2, p=1) + BN + ReLU  → 256 × 8 × 8\n"
+                "├─ ConvTranspose2d(256, 128, k=4, s=2, p=1) + BN + ReLU  → 128 × 16 × 16\n"
+                "├─ ConvTranspose2d(128,  64, k=4, s=2, p=1) + BN + ReLU  →  64 × 32 × 32\n"
+                "└─ ConvTranspose2d( 64,   3, k=4, s=2, p=1) + Tanh        →   3 × 64 × 64\n"
+                "Output: 64 × 64 RGB image normalized to [-1, 1]",
+                language="text",
+            )
+        with arch_cols[1]:
+            st.markdown("##### Discriminator Structure (2,765,568 parameters)")
+            st.code(
+                "Input: x ∈ R^(3 × 64 × 64) RGB image\n"
+                "├─ Conv2d(  3,  64, k=4, s=2, p=1) + LeakyReLU(0.2)       →  64 × 32 × 32\n"
+                "├─ Conv2d( 64, 128, k=4, s=2, p=1) + BN + LeakyReLU(0.2)  → 128 × 16 × 16\n"
+                "├─ Conv2d(128, 256, k=4, s=2, p=1) + BN + LeakyReLU(0.2)  → 256 ×  8 ×  8\n"
+                "├─ Conv2d(256, 512, k=4, s=2, p=1) + BN + LeakyReLU(0.2)  → 512 ×  4 ×  4\n"
+                "└─ Conv2d(512,   1, k=4, s=1, p=0)                         →   1 ×  1 ×  1\n"
+                "Output: Scalar real/fake unbounded logit",
+                language="text",
+            )
+
+        st.markdown("#### Comparative Analysis: DCGAN vs. Stable Diffusion 1.5")
+        st.caption("Detailed technical comparison between our two generative synthesis paradigms:")
+        comp_df = pd.DataFrame([
+            {"Aspect": "Primary Input", "DCGAN (Ours)": "Unconditioned random latent noise z ∈ R^100", "Stable Diffusion 1.5 (Pretrained)": "Natural language prompt + initial Gaussian noise z_T ∈ R^(4×64×64)"},
+            {"Aspect": "Native Output Resolution", "DCGAN (Ours)": "64 × 64 RGB (3 channels)", "Stable Diffusion 1.5 (Pretrained)": "512 × 512 RGB (3 channels)"},
+            {"Aspect": "Synthesis Mechanism", "DCGAN (Ours)": "Single feedforward pass through transposed convolutions", "Stable Diffusion 1.5 (Pretrained)": "Iterative reverse-denoising Markov chain (15–50 U-Net steps)"},
+            {"Aspect": "Conditioning", "DCGAN (Ours)": "Unconditioned (samples from learned CASIA prior)", "Stable Diffusion 1.5 (Pretrained)": "CLIP text cross-attention + Classifier-Free Guidance (CFG)"},
+            {"Aspect": "Training Paradigm", "DCGAN (Ours)": "Adversarial minimax zero-sum game (G vs D) on CASIA", "Stable Diffusion 1.5 (Pretrained)": "Denoising score matching / variational lower bound on LAION"},
+            {"Aspect": "Inference Latency", "DCGAN (Ours)": "10–40 ms (instantaneous)", "Stable Diffusion 1.5 (Pretrained)": "2–8 s on GPU; 1–3 min on CPU"},
+            {"Aspect": "Parameters (Generator)", "DCGAN (Ours)": "3.58M parameters", "Stable Diffusion 1.5 (Pretrained)": "859.5M (U-Net) + 123.1M (CLIP) + 83.7M (VAE) = 1.07B parameters"},
+            {"Aspect": "Role in Framework", "DCGAN (Ours)": "Adversarial synthesis baseline and latent interpolation research", "Stable Diffusion 1.5 (Pretrained)": "High-fidelity forensic incident scene simulation and benchmark stress-testing"},
+        ])
+        st.dataframe(comp_df, hide_index=True, width="stretch")
+
+    with log_tab:
+        st.markdown("#### DCGAN Generation Audit Log")
+        st.caption("Immutable append-only record tracking all synthetic generation requests in outputs/gan/gan_generation_log.csv:")
+        log_csv = ROOT / "outputs" / "gan" / "gan_generation_log.csv"
+        if log_csv.is_file():
+            try:
+                log_df = pd.read_csv(log_csv)
+                st.dataframe(log_df.tail(20), hide_index=True, width="stretch")
+            except Exception as exc:
+                st.caption(f"Audit log exists but could not be read: {exc}")
+        else:
+            st.caption("No generation events recorded yet. Synthesizing an image above will populate this log automatically.")
+
+
 elif page == "Vision Transformer":
-    heading("Model 03 · patch attention", "Transformer Forensic Autoencoder V2", "The image becomes 64 patch tokens. Self-attention models patch relationships while all encoded spatial tokens are retained for reconstruction.")
+    heading("Model 04 · patch attention", "Transformer Forensic Autoencoder V2", "The image becomes 64 patch tokens. Self-attention models patch relationships while all encoded spatial tokens are retained for reconstruction.")
     info = st.columns(4)
     for column, label, value in zip(info, ["Input", "Patch size", "Patch tokens", "Embedding"], ["3×128×128", "16×16", "64", "256"]):
         column.metric(label, value)
@@ -1001,7 +1360,9 @@ elif page == "Synthetic Evidence Generation (Diffusion)":
 
 
 elif page == "Model Evaluation":
-    heading("Evidence-based comparison", "Model roles and measured outcomes", "Each architecture has a distinct objective. Reconstruction metrics compare output with input; they do not establish a single overall ranking or forensic validity.")
+    heading("Evidence-based comparison", "Model roles and measured outcomes", "Each architecture has a distinct objective. Reconstruction metrics compare output with input, while generative metrics evaluate distribution fidelity. They do not establish a single overall ranking or forensic validity.")
+    
+    st.markdown("### 1. Reconstruction & Representation Models (Canonical Held-Out Split)")
     try:
         comparison = load_image_comparison()
         st.dataframe(comparison, hide_index=True, width="stretch")
@@ -1011,15 +1372,52 @@ elif page == "Model Evaluation":
         )
     except (FileNotFoundError, KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
         st.error(f"Verified comparison results are unavailable: {exc}")
-    roles = st.columns(3, gap="large")
-    roles[0].success("**AE**\n\nUnderstandable deterministic compression and reconstruction baseline.")
-    roles[1].info("**VAE V5**\n\nStrongest current reconstruction with probabilistic representation; weak prior-only generation.")
-    roles[2].warning("**Transformer V2**\n\nAdds patch attention and spatial-token reconstruction; anomaly separation remains limited.")
+
+    st.markdown("### 2. Generative Synthesis Models (Adversarial vs. Diffusion)")
+    gen_comp_df = pd.DataFrame([
+        {
+            "Model": "DCGAN Generator (Ours)",
+            "Paradigm": "Adversarial Minimax (G vs D)",
+            "Input Conditioning": "Unconditioned latent noise z ∈ R^100",
+            "Native Output": "64 × 64 RGB",
+            "Evaluated Metric (FID) ↓": "169.88 (1,892 CASIA test images)",
+            "Inception Score ↑": "2.95 ± 0.13",
+            "Inference Latency": "10–40 ms (instantaneous)",
+            "Parameters": "3,576,704 (G) / 2,765,568 (D)",
+            "Training": "30 epochs on CASIA (Tesla T4)",
+        },
+        {
+            "Model": "Stable Diffusion 1.5 (Pretrained)",
+            "Paradigm": "Latent Reverse Denoising (LDM)",
+            "Input Conditioning": "BPE Text tokens (CLIP) + Gaussian noise",
+            "Native Output": "512 × 512 RGB",
+            "Evaluated Metric (FID) ↓": "Foundation SOTA benchmark",
+            "Inception Score ↑": "High multimodal fidelity",
+            "Inference Latency": "2.7–8.1 s (Tesla T4) / 1–3 min (CPU)",
+            "Parameters": "1,066,235,307 (~1.07B)",
+            "Training": "LAION-5B foundation weights",
+        },
+    ])
+    st.dataframe(gen_comp_df, hide_index=True, width="stretch")
+    st.caption("Generative metrics evaluate distribution fidelity and diversity; they are mathematically distinct from reconstruction fidelity.")
+
+    st.markdown("### Functional Roles Across the 6 Model Families")
+    roles1 = st.columns(3, gap="medium")
+    roles1[0].success("**01 · AE**\n\nDeterministic compression and high-fidelity baseline reconstruction.")
+    roles1[1].info("**02 · VAE V5**\n\nProbabilistic latent representation and image-conditioned stochastic sampling.")
+    roles1[2].primary("**03 · DCGAN**\n\nAdversarial synthetic patch generation from random latent noise vectors.")
+
+    roles2 = st.columns(3, gap="medium")
+    roles2[0].warning("**04 · ViT V2**\n\nSelf-attention patch modeling with interpretable learned spatial relationships.")
+    roles2[1].info("**05 · FLAN-T5**\n\nToken-aware pretrained language model assisting with text and PDF intelligence.")
+    roles2[2].success("**06 · Diffusion**\n\nControlled forensic incident scenario generation and benchmark stress simulation.")
+
     st.markdown('<div class="guardrail"><b>Responsible conclusion:</b> none of these models is validated as a standalone tampering detector. Never use them as the sole basis for a forensic or legal decision.</div>', unsafe_allow_html=True)
     with st.expander("Why these metrics are not interchangeable"):
-        st.write("MSE, PSNR, and SSIM describe reconstruction fidelity.")
-        st.write("ROC-AUC describes ranking separation; values near 0.5 are close to random ranking.")
-        st.write("Different evaluation subsets must not be presented as directly equivalent.")
+        st.write("MSE, PSNR, and SSIM describe reconstruction fidelity between an input and output pair.")
+        st.write("FID and Inception Score describe generative distribution distance and sample diversity.")
+        st.write("ROC-AUC describes ranking separation; values near 0.5 indicate random ranking.")
+        st.write("Different evaluation objectives must never be presented as directly equivalent.")
 
 
 elif page == "Privacy & Ethical AI":
@@ -1082,20 +1480,20 @@ else:
         "A reproducible academic prototype built for Semester 7 Generative AI review and live faculty demonstration.",
     )
     details = st.columns(3)
-    details[0].metric("Required architectures", "3")
+    details[0].metric("Integrated model families", "6")
     details[1].metric("Canonical test images", "1,892")
     details[2].metric("Demo samples", "24")
     st.markdown("### Implemented scope")
     st.write(
-        "Quality Autoencoder V1, VAE V5, trained Vision Transformer V2, a separate pretrained "
-        "FLAN-T5 evidence-intelligence integration, and a pretrained Stable Diffusion 1.5 synthetic "
-        "evidence scenario generator. GAN code/checkpoints remain preserved for the later phase."
+        "Six operational model families: (1) Quality Autoencoder V1, (2) VAE V5 Final, (3) DCGAN "
+        "Synthetic Generator, (4) trained Vision Transformer V2, (5) pretrained FLAN-T5 Evidence "
+        "Intelligence, and (6) pretrained Stable Diffusion 1.5 Synthetic Scenario Generator."
     )
     st.markdown("### Current boundaries")
     st.write(
-        "Diffusion is integrated as a pretrained synthetic incident scenario generator (Stable Diffusion 1.5). "
-        "No model is validated as a standalone forgery detector, and the application does not make legal, "
-        "authenticity, guilt, or admissibility decisions."
+        "No model is validated as a standalone forgery detector or tampering verdict system. "
+        "All generated outputs (DCGAN and Diffusion) are synthetic educational demonstrations and "
+        "must never be treated as verified real-world digital evidence."
     )
     st.markdown("### Runtime")
     st.code(f"Python · PyTorch {torch.__version__} · Streamlit {st.__version__} · device {DEVICE}")

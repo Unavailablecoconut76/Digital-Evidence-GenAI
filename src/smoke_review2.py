@@ -147,6 +147,32 @@ def run() -> dict[str, object]:
         "checkpoint_exists": (ROOT / "checkpoints" / "Diffusion_UNet.pth").is_file(),
     }
 
+    # DCGAN service verification
+    from models.gan_service import (
+        GANService,
+        GANGenerationConfig,
+        apply_gan_watermark,
+    )
+
+    gan_service = GANService(
+        checkpoint_path=ROOT / "checkpoints" / "best_generator.pth",
+        device=device,
+    )
+    gan_info = gan_service.get_model_info()
+    gan_gen = gan_service.generate(GANGenerationConfig(count=1, seed=42))
+    gan_interp = gan_service.interpolate(seed_a=42, seed_b=99, steps=4)
+
+    report["dcgan_service"] = {
+        "model_type": gan_info["model_type"],
+        "latent_dim": gan_info["latent_dim"],
+        "generator_parameters": gan_info["generator_parameters"],
+        "epochs_completed": gan_info["epochs_completed"],
+        "sample_shape": list(gan_gen.images[0].size),
+        "upscaled_shape": list(gan_gen.upscaled_images[0].size),
+        "interpolation_count": len(gan_interp),
+        "latency_seconds": gan_gen.generation_time_seconds,
+    }
+
     return report
 
 
